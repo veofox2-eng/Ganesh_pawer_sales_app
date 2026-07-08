@@ -49,7 +49,11 @@ export default function SuperAdminControls() {
 
   const filteredProfiles = useMemo(() => {
     return profiles.filter(p => {
-      const matchSearch = (p.username || p.full_name || p.feature_flags?.email || '').toLowerCase().includes(searchQuery.toLowerCase());
+      const name = p.username || p.full_name || p.feature_flags?.email || '';
+      // Hide the Super Administrator from being managed here
+      if (name === 'Super Administrator') return false;
+      
+      const matchSearch = name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchRole = filterRole === 'ALL' || 
                         (filterRole === 'PENDING' && p.approval_status === 'Pending') ||
                         (filterRole === 'APPROVED' && p.approval_status === 'Approved') ||
