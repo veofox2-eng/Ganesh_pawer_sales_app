@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
-import { Shield, Search, User, Trash2, CheckCircle, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { Shield, Search, User, Trash2, CheckCircle, Eye, EyeOff, KeyRound, ChevronDown } from 'lucide-react';
 
 const DEFAULT_FEATURES = {
   dashboards: {
@@ -24,6 +24,7 @@ export default function SuperAdminControls() {
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState('ALL');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Delete/Approve Modals
   const [actionData, setActionData] = useState<{ id: string, name: string, type: 'DELETE' | 'APPROVE' } | null>(null);
@@ -192,17 +193,45 @@ export default function SuperAdminControls() {
                 style={{ width: '100%', padding: '8px 12px 8px 36px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }}
               />
             </div>
-            <select 
-              value={filterRole} onChange={e => setFilterRole(e.target.value)}
-              style={{ padding: '8px 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }}
-            >
-              <option value="ALL">All</option>
-              <option value="PENDING">Pending</option>
-              <option value="APPROVED">Approved</option>
-              <option value="ADMIN">Admin</option>
-              <option value="SALES">Sales</option>
-              <option value="FIELD">Field</option>
-            </select>
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                style={{ padding: '8px 16px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', height: '100%', minWidth: 120, justifyContent: 'space-between' }}
+              >
+                <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>
+                  {filterRole === 'ALL' ? 'All Users' : filterRole.charAt(0).toUpperCase() + filterRole.slice(1).toLowerCase()}
+                </span>
+                <ChevronDown size={16} color="var(--muted)" style={{ transform: isFilterOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }} />
+              </button>
+              
+              <AnimatePresence>
+                {isFilterOpen && (
+                  <>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setIsFilterOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: 5, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.95 }} transition={{ duration: 0.15 }}
+                      style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 150, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 6, boxShadow: '0 10px 40px rgba(0,0,0,0.15)', zIndex: 100 }}
+                    >
+                      {['ALL', 'PENDING', 'APPROVED', 'ADMIN', 'SALES', 'FIELD'].map(role => (
+                        <button
+                          key={role}
+                          onClick={() => { setFilterRole(role); setIsFilterOpen(false); }}
+                          style={{
+                            width: '100%', textAlign: 'left', padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                            background: filterRole === role ? 'rgba(99,102,241,0.1)' : 'transparent',
+                            color: filterRole === role ? 'var(--accent)' : 'var(--text)',
+                            fontSize: '0.9rem', fontWeight: filterRole === role ? 600 : 500,
+                            display: 'block', transition: 'background 0.1s'
+                          }}
+                        >
+                          {role === 'ALL' ? 'All Users' : role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()}
+                        </button>
+                      ))}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
           <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 4 }}>
