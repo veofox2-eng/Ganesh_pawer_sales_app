@@ -216,7 +216,7 @@ export default function SuperAdminControls() {
                       initial={{ opacity: 0, y: 5, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.95 }} transition={{ duration: 0.15 }}
                       style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 150, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 6, boxShadow: '0 10px 40px rgba(0,0,0,0.15)', zIndex: 100 }}
                     >
-                      {['ALL', 'PENDING', 'APPROVED', 'ADMIN', 'SALES', 'FIELD'].map(role => (
+                      {['ALL', 'ADMIN', 'SALES', 'FIELD', 'PENDING', 'APPROVED'].map(role => (
                         <button
                           key={role}
                           onClick={() => { setFilterRole(role); setIsFilterOpen(false); }}
