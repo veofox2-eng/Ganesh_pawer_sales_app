@@ -1,0 +1,163 @@
+/* ─── Payment Log Module ─── */
+.page { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.pageTitle { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; }
+.pageTitle span {
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.addBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+  color: white;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 14px rgba(245,158,11,0.3);
+  transition: all var(--transition-normal);
+}
+.addBtn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(245,158,11,0.4); }
+
+/* Summary Cards */
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+@media (max-width: 700px) { .summaryGrid { grid-template-columns: 1fr; } }
+
+.summaryCard {
+  padding: 1.5rem;
+  background: var(--bg-panel);
+  backdrop-filter: var(--blur-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
+}
+.summaryCard:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+
+.summaryLabel { font-size: 0.8rem; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; }
+.summaryValue { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.04em; }
+.incomeValue { color: var(--success); }
+.expenseValue { color: var(--danger); }
+.pendingValue { color: var(--warning); }
+
+/* Filters */
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.9rem 1.25rem;
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  backdrop-filter: var(--blur-md);
+  border: 1px solid var(--border-color);
+}
+
+.filterBtn {
+  padding: 0.45rem 1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+}
+.filterBtn:hover { border-color: #f59e0b; color: var(--text-primary); }
+.filterBtnActive { background: rgba(245,158,11,0.12); border-color: #f59e0b; color: #f59e0b; }
+
+/* Payment List */
+.paymentList { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.paymentCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.5rem;
+  background: var(--bg-panel);
+  backdrop-filter: var(--blur-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
+}
+.paymentCard:hover { border-color: rgba(245,158,11,0.3); transform: translateX(3px); }
+
+.paymentIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.incomeIcon { background: rgba(16,185,129,0.12); color: var(--success); border: 1px solid rgba(16,185,129,0.2); }
+.expenseIcon { background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.15); }
+
+.paymentInfo { flex: 1; min-width: 0; }
+.paymentClient { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.2rem; }
+.paymentMeta { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
+.paymentNote { font-size: 0.82rem; color: var(--text-secondary); }
+.paymentType {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  background: rgba(245,158,11,0.1);
+  color: #f59e0b;
+  border: 1px solid rgba(245,158,11,0.2);
+}
+.paymentDate { font-size: 0.78rem; color: var(--text-muted); }
+
+.paymentRight { text-align: right; flex-shrink: 0; }
+.paymentAmount { font-size: 1.15rem; font-weight: 700; }
+.incomeAmount { color: var(--success); }
+.expenseAmount { color: var(--danger); }
+.pendingLabel { font-size: 0.78rem; color: var(--warning); margin-top: 0.15rem; display: flex; align-items: center; justify-content: flex-end; gap: 0.3rem; }
+.paidLabel { font-size: 0.78rem; color: var(--success); margin-top: 0.15rem; }
+.deleteBtn { padding: 0.35rem; border-radius: 50%; color: var(--text-muted); transition: all var(--transition-fast); }
+.deleteBtn:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
+
+.emptyState { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
+
+/* Modal */
+.modalOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.modal { width: 100%; max-width: 520px; background: #12131a; border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 2rem; box-shadow: 0 25px 60px rgba(0,0,0,0.7); }
+.modalHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.75rem; }
+.modalTitle { font-size: 1.2rem; font-weight: 700; }
+.closeBtn { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all var(--transition-fast); }
+.closeBtn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+.formGrid { display: flex; flex-direction: column; gap: 1rem; }
+.formRow { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.formGroup { display: flex; flex-direction: column; gap: 0.5rem; }
+.formLabel { font-size: 0.82rem; font-weight: 500; color: var(--text-secondary); }
+.formInput, .formSelect, .formTextarea { background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.75rem 1rem; color: var(--text-primary); font-size: 0.9rem; font-family: inherit; outline: none; transition: all var(--transition-fast); }
+.formInput:focus, .formSelect:focus, .formTextarea:focus { border-color: #f59e0b; background: rgba(255,255,255,0.06); }
+.formSelect option { background: #12131a; }
+.formTextarea { resize: vertical; min-height: 70px; }
+.modalFooter { display: flex; gap: 0.75rem; margin-top: 1.75rem; justify-content: flex-end; }
+.cancelBtn { padding: 0.75rem 1.5rem; border-radius: var(--radius-md); font-weight: 500; color: var(--text-secondary); border: 1px solid var(--border-color); transition: all var(--transition-fast); }
+.cancelBtn:hover { background: rgba(255,255,255,0.04); }
+.saveBtn { padding: 0.75rem 1.75rem; background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); color: white; border-radius: var(--radius-md); font-weight: 600; box-shadow: 0 4px 14px rgba(245,158,11,0.3); transition: all var(--transition-fast); }
+.saveBtn:hover { transform: translateY(-1px); }
+.saveBtn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* Type Toggle */
+.typeToggle { display: flex; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-color); }
+.typeBtn { flex: 1; padding: 0.7rem; font-size: 0.88rem; font-weight: 600; transition: all var(--transition-fast); color: var(--text-muted); }
+.typeIncome.typeActive { background: rgba(16,185,129,0.15); color: var(--success); }
+.typeExpense.typeActive { background: rgba(239,68,68,0.1); color: var(--danger); }

@@ -1,0 +1,6 @@
+node_modules/
+.expo/
+Builds/
+salesflow-mobile.rar
+.env
+node_modules

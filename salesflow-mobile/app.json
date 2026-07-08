@@ -1,0 +1,96 @@
+{
+  "expo": {
+    "name": "SalesFlow GP",
+    "slug": "salesflow-crm",
+    "version": "1.5.18",
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0b12"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#0a0b12"
+      },
+      "package": "com.foxeditz.ganeshpower",
+      "permissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CALL_PHONE",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_PHONE_STATE",
+        "android.permission.READ_CALL_LOG",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.POST_NOTIFICATIONS"
+      ],
+      "versionCode": 19
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.foxeditz.salesflow"
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.24",
+            "kotlinCompilerExtensionVersion": "1.5.14",
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow SalesFlow to access your microphone for voice notes.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow SalesFlow to access your media for call recordings.",
+          "savePhotosPermission": "Allow SalesFlow to save media."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow SalesFlow to access your photos for attachments."
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow SalesFlow to use your location for field employee tracking.",
+          "locationAlwaysPermission": "Allow SalesFlow to use your location in the background.",
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
+      "expo-notifications",
+      "expo-asset"
+    ],
+    "scheme": "salesflow",
+    "extra": {
+      "eas": {}
+    }
+  }
+}

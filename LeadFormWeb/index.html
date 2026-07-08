@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Lead Form</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4 font-sans text-slate-900">
+  
+  <div class="bg-white max-w-md w-full rounded-2xl shadow-xl p-8 border border-slate-100" id="form-container">
+    <div class="text-center mb-8">
+      <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight" id="project-name">Loading...</h1>
+      <p class="text-sm text-slate-500 mt-2">Please fill out the form below to register your interest.</p>
+    </div>
+    
+    <form id="lead-form" class="space-y-5">
+      <div>
+        <label for="name" class="block text-sm font-semibold text-slate-700 mb-1">Full Name *</label>
+        <input type="text" id="name" name="name" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50">
+      </div>
+      
+      <div>
+        <label for="phone" class="block text-sm font-semibold text-slate-700 mb-1">Phone Number *</label>
+        <input type="tel" id="phone" name="phone" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50">
+      </div>
+      
+      <div id="purpose-container">
+        <label for="purpose" class="block text-sm font-semibold text-slate-700 mb-1">Purpose of Enquiry</label>
+        <textarea id="purpose" name="purpose" rows="3" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50 placeholder-slate-400" placeholder="Optional details..."></textarea>
+      </div>
+
+      <!-- Container for Dynamic Custom Fields -->
+      <div id="custom-fields-container" class="space-y-5"></div>
+      
+      <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transition-all">
+        Submit Details
+      </button>
+      <p id="error-msg" class="text-red-500 text-sm text-center hidden mt-2"></p>
+    </form>
+  </div>
+
+  <!-- Success Screen (Hidden by default) -->
+  <div class="bg-white max-w-md w-full rounded-2xl shadow-xl p-8 text-center border border-slate-100 hidden" id="success-container">
+    <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+    </div>
+    <h1 class="text-2xl font-bold mb-2">Thank You!</h1>
+    <p class="text-slate-500 mb-6">Your details have been submitted successfully. We will get back to you shortly.</p>
+  </div>
+
+  <script>
+    // Get the project ID from the URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectId = urlParams.get('id');
+    const API_URL = 'https://korgtxyzpznaondfiytk.supabase.co/functions/v1/lead-form?id=' + projectId;
+
+    if (!projectId) {
+      document.getElementById('project-name').innerText = 'Invalid Link';
+      document.getElementById('lead-form').style.display = 'none';
+    } else {
+      let customFieldsConfig = [];
+
+      // Fetch project name and custom fields
+      fetch(API_URL)
+        .then(res => res.json())
+        .then(data => {
+          if (data.projectName) {
+            document.getElementById('project-name').innerText = data.projectName;
+            document.title = data.projectName;
+          }
+          if (data.purposeOptions && Array.isArray(data.purposeOptions) && data.purposeOptions.length > 0) {
+            const purposeContainer = document.getElementById('purpose-container');
+            purposeContainer.innerHTML = ''; // Clear existing textarea
+            
+            const label = document.createElement('label');
+            label.setAttribute('for', 'purpose');
+            label.className = 'block text-sm font-semibold text-slate-700 mb-1';
+            label.innerText = 'Purpose of Enquiry';
+            purposeContainer.appendChild(label);
+            
+            const select = document.createElement('select');
+            select.id = 'purpose';
+            select.name = 'purpose';
+            select.className = 'w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50 appearance-none';
+            select.required = true;
+            
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.innerText = 'Select a purpose...';
+            defaultOption.disabled = true;
+            defaultOption.selected = true;
+            select.appendChild(defaultOption);
+            
+            data.purposeOptions.forEach(opt => {
+              const optionEl = document.createElement('option');
+              optionEl.value = opt;
+              optionEl.innerText = opt;
+              select.appendChild(optionEl);
+            });
+            
+            purposeContainer.appendChild(select);
+          }
+          if (data.customFields && Array.isArray(data.customFields)) {
+            customFieldsConfig = data.customFields;
+            const container = document.getElementById('custom-fields-container');
+            data.customFields.forEach((field, index) => {
+              const fieldId = 'custom_field_' + index;
+              const wrapper = document.createElement('div');
+              
+              const label = document.createElement('label');
+              label.setAttribute('for', fieldId);
+              label.className = 'block text-sm font-semibold text-slate-700 mb-1';
+              label.innerText = field.name;
+              wrapper.appendChild(label);
+
+              if (field.type === 'longtext') {
+                const input = document.createElement('textarea');
+                input.id = fieldId;
+                input.name = field.name;
+                input.rows = 3;
+                input.className = 'w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50';
+                wrapper.appendChild(input);
+              } else {
+                const input = document.createElement('input');
+                input.type = field.type === 'number' ? 'number' : (field.type === 'date' ? 'date' : 'text');
+                input.id = fieldId;
+                input.name = field.name;
+                input.className = 'w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50';
+                wrapper.appendChild(input);
+              }
+              container.appendChild(wrapper);
+            });
+          }
+        })
+        .catch(console.error);
+
+      // Handle Form Submission
+      document.getElementById('lead-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('submit-btn');
+        const errorMsg = document.getElementById('error-msg');
+        
+        btn.innerText = 'Submitting...';
+        btn.disabled = true;
+        errorMsg.classList.add('hidden');
+
+        const payload = {
+          name: document.getElementById('name').value,
+          phone: document.getElementById('phone').value,
+          purpose: document.getElementById('purpose').value,
+          custom_responses: {}
+        };
+
+        // Collect custom field responses
+        customFieldsConfig.forEach((field, index) => {
+          const el = document.getElementById('custom_field_' + index);
+          if (el) {
+            payload.custom_responses[field.name] = el.value;
+          }
+        });
+
+        fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            document.getElementById('form-container').classList.add('hidden');
+            document.getElementById('success-container').classList.remove('hidden');
+          } else {
+            throw new Error(data.error || 'Something went wrong');
+          }
+        })
+        .catch(err => {
+          errorMsg.innerText = err.message;
+          errorMsg.classList.remove('hidden');
+          btn.innerText = 'Submit Details';
+          btn.disabled = false;
+        });
+      });
+    }
+  </script>
+</body>
+</html>
