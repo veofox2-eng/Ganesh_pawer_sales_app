@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
-import { Users, PhoneCall, MessageCircle, User, ArrowLeft, CheckCircle, Trash2, XCircle, Search, Play, Pause, FileText, Paperclip, Download, X, ChevronDown, MapPin, Mic, Map, UserPlus, Lock } from 'lucide-react';
+import { Users, PhoneCall, MessageCircle, User, ArrowLeft, CheckCircle, Trash2, XCircle, Search, Play, Pause, FileText, Paperclip, Download, X, ChevronDown, MapPin, Mic, Map, UserPlus, Lock, Eye, EyeOff } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import autoTable from 'jspdf-autotable';
@@ -49,6 +49,7 @@ export default function FieldEmployeesDashboard() {
   
   const [deleteEmployeeData, setDeleteEmployeeData] = useState<{ id: string, name: string } | null>(null);
   const [deleteAdminPassword, setDeleteAdminPassword] = useState('');
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
@@ -560,7 +561,7 @@ export default function FieldEmployeesDashboard() {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: 2 }}>{emp.username || 'Pending Name'}</div>
+                  <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: 2 }}>{emp.username || emp.feature_flags?.email || 'Pending Name'}</div>
                   <div style={{ fontSize: '0.75rem', opacity: selectedEmpId === emp.id ? 0.9 : 0.6 }}>
                     {emp.stats.total} Clients • {emp.stats.callCount} Calls
                   </div>
@@ -1434,12 +1435,19 @@ export default function FieldEmployeesDashboard() {
               <div style={{ position: 'relative' }}>
                 <Lock size={16} color="var(--muted)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
                 <input 
-                  type="password" 
+                  type={showDeletePassword ? "text" : "password"} 
                   value={deleteAdminPassword}
                   onChange={(e) => setDeleteAdminPassword(e.target.value)}
                   placeholder="Enter your dashboard password..."
-                  style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.5rem', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '0.85rem 3rem 0.85rem 2.5rem', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowDeletePassword(!showDeletePassword)}
+                  style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--muted)' }}
+                >
+                  {showDeletePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
 
