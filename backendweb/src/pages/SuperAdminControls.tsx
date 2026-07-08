@@ -145,7 +145,7 @@ export default function SuperAdminControls() {
         const res = await fetch('https://ganesh-backend-3j1t.onrender.com/api/delete-employee', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ employeeId: actionData.id, adminPassword })
+          body: JSON.stringify({ employee_id: actionData.id, admin_password: adminPassword })
         });
         const d = await res.json();
         if (!res.ok) throw new Error(d.error || 'Failed to delete user');
