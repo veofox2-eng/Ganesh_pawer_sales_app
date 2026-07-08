@@ -696,36 +696,6 @@ function Overview() {
   );
 }
 
-function ComingSoon({ title }: { title: string }) {
-  return (
-    <motion.div {...pageV}>
-      <motion.div
-        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }} style={{ marginBottom: '1.75rem' }}
-      >
-        <h1 style={{ fontSize: '1.625rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em', marginBottom: 5, transition: 'color 0.4s ease' }}>{title}</h1>
-        <p style={{ fontSize: '0.875rem', color: 'var(--muted)', transition: 'color 0.4s ease' }}>Data tables, pie charts & employee reports</p>
-      </motion.div>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, delay: 0.15 }}
-        style={{
-          background: 'var(--surface)', border: '1px solid var(--border)',
-          backdropFilter: 'blur(20px)', borderRadius: 18, padding: '4rem',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', minHeight: 300,
-          transition: 'background 0.4s ease',
-        }}
-      >
-        <motion.div
-          animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-          style={{ width: 44, height: 44, borderRadius: '50%', border: '2px solid var(--border)', borderTopColor: 'var(--accent)', transition: 'border-color 0.4s ease' }}
-        />
-        <p style={{ fontSize: '0.9375rem', color: 'var(--muted)', fontWeight: 500, transition: 'color 0.4s ease' }}>Building employee data…</p>
-        <p style={{ fontSize: '0.8125rem', color: 'var(--muted)', opacity: 0.6, transition: 'color 0.4s ease' }}>Tables · Pie Charts · Call Logs · Recordings</p>
-      </motion.div>
-    </motion.div>
-  );
-}
 
 export default function Dashboard() {
   const location = useLocation();

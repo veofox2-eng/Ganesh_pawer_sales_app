@@ -46,6 +46,12 @@ export default function FieldEmployeesDashboard() {
   const [addEmpData, setAddEmpData] = useState({ email: '', password: '', confirmPassword: '', role: 'Field', industry_position: '' });
   const [addEmpLoading, setAddEmpLoading] = useState(false);
   const [addEmpError, setAddEmpError] = useState('');
+  
+  const [deleteEmployeeData, setDeleteEmployeeData] = useState<{ id: string, name: string } | null>(null);
+  const [deleteAdminPassword, setDeleteAdminPassword] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const dashboardScrollPos = useRef<number>(0);
 
@@ -456,7 +462,7 @@ export default function FieldEmployeesDashboard() {
     
     setAddEmpLoading(true);
     try {
-      const response = await fetch('http://localhost:5002/api/create-employee', {
+      const response = await fetch('https://ganesh-backend-3j1t.onrender.com/api/create-employee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -477,6 +483,34 @@ export default function FieldEmployeesDashboard() {
       setAddEmpError(err.message || 'Something went wrong');
     } finally {
       setAddEmpLoading(false);
+    }
+  };
+
+  const handleDeleteEmployeeConfirm = async () => {
+    if (!deleteEmployeeData || !deleteAdminPassword) return;
+    setDeleteLoading(true);
+    setDeleteError('');
+    try {
+      const response = await fetch('https://ganesh-backend-3j1t.onrender.com/api/delete-employee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employee_id: deleteEmployeeData.id,
+          admin_password: deleteAdminPassword
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to delete employee');
+      
+      alert('Employee and all their records deleted successfully!');
+      setDeleteEmployeeData(null);
+      setDeleteAdminPassword('');
+      if (selectedEmpId === deleteEmployeeData.id) setSelectedEmpId(null);
+      window.location.reload();
+    } catch (err: any) {
+      setDeleteError(err.message || 'Something went wrong');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -524,9 +558,25 @@ export default function FieldEmployeesDashboard() {
                 color: selectedEmpId === emp.id ? '#fff' : 'var(--text)'
               }}
             >
-              <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: 2 }}>{emp.username || 'Pending Name'}</div>
-              <div style={{ fontSize: '0.75rem', opacity: selectedEmpId === emp.id ? 0.9 : 0.6 }}>
-                {emp.stats.total} Clients • {emp.stats.callCount} Calls
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: 2 }}>{emp.username || 'Pending Name'}</div>
+                  <div style={{ fontSize: '0.75rem', opacity: selectedEmpId === emp.id ? 0.9 : 0.6 }}>
+                    {emp.stats.total} Clients • {emp.stats.callCount} Calls
+                  </div>
+                </div>
+                <button 
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    setDeleteEmployeeData({ id: emp.id, name: emp.username || emp.feature_flags?.email || 'Unknown' }); 
+                    setDeleteAdminPassword(''); 
+                    setDeleteError(''); 
+                  }}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', opacity: 0.7 }}
+                  title="Delete Employee"
+                >
+                  <Trash2 size={16} color={selectedEmpId === emp.id ? "#fff" : "var(--danger, #ef4444)"} />
+                </button>
               </div>
             </div>
           ))}
@@ -1355,6 +1405,57 @@ export default function FieldEmployeesDashboard() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Employee Confirmation Popup */}
+      {deleteEmployeeData && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 24, padding: '2.5rem', width: '100%', maxWidth: 450, border: '1px solid var(--border)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.35rem', color: '#ef4444', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Trash2 size={24} /> Delete Employee
+              </h3>
+              <button onClick={() => setDeleteEmployeeData(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 0 }}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: 12, border: '1px solid rgba(239, 68, 68, 0.2)', marginBottom: '1.5rem' }}>
+              <p style={{ margin: 0, color: '#ef4444', fontSize: '0.9rem', fontWeight: 600, lineHeight: 1.5 }}>
+                WARNING: You are about to completely delete <span style={{ fontWeight: 800 }}>{deleteEmployeeData.name}</span>.
+                This will permanently erase their account and ALL associated clients and interaction records from the database. This action cannot be undone.
+              </p>
+            </div>
+
+            <div style={{ marginBottom: '2rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text)', fontSize: '0.85rem', fontWeight: 600 }}>Confirm Admin Password</label>
+              <div style={{ position: 'relative' }}>
+                <Lock size={16} color="var(--muted)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+                <input 
+                  type="password" 
+                  value={deleteAdminPassword}
+                  onChange={(e) => setDeleteAdminPassword(e.target.value)}
+                  placeholder="Enter your dashboard password..."
+                  style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.5rem', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            {deleteError && (
+              <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: 8, fontSize: '0.85rem', fontWeight: 600, marginBottom: '1.5rem', textAlign: 'center' }}>
+                {deleteError}
+              </div>
+            )}
+
+            <button 
+              onClick={handleDeleteEmployeeConfirm}
+              disabled={deleteLoading || !deleteAdminPassword}
+              style={{ width: '100%', padding: '1rem', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 12, fontSize: '1rem', fontWeight: 700, cursor: (deleteLoading || !deleteAdminPassword) ? 'not-allowed' : 'pointer', opacity: (deleteLoading || !deleteAdminPassword) ? 0.7 : 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+            >
+              {deleteLoading ? 'Deleting...' : 'Permanently Delete Employee'}
+            </button>
           </div>
         </div>
       )}
