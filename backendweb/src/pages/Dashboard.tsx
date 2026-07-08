@@ -6,6 +6,7 @@ import { useRef, useEffect, useState, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import SalesEmployeesDashboard from './SalesEmployeesDashboard';
 import FieldEmployeesDashboard from './FieldEmployeesDashboard';
+import SuperAdminControls from './SuperAdminControls';
 
 const pageV = {
   initial: { opacity: 0, y: 18, scale: 0.99 },
@@ -706,6 +707,7 @@ export default function Dashboard() {
           <Route path="/"                  element={<Overview />} />
           <Route path="/sales-employees"   element={<SalesEmployeesDashboard />} />
           <Route path="/field-employees"   element={<FieldEmployeesDashboard />} />
+          <Route path="/super-admin"       element={<SuperAdminControls />} />
         </Routes>
       </AnimatePresence>
     </Layout>

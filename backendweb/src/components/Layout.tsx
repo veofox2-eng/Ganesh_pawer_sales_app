@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, UserCog, LogOut, Zap } from 'lucide-react';
+import { LayoutDashboard, Users, UserCog, LogOut, Zap, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import ThemeSwitcher from './ThemeSwitcher';
@@ -11,6 +11,7 @@ const navItems = [
   { to: '/dashboard',                 end: true,  Icon: LayoutDashboard, label: 'Overview'        },
   { to: '/dashboard/sales-employees', end: false, Icon: Users,           label: 'Sales Employees' },
   { to: '/dashboard/field-employees', end: false, Icon: UserCog,         label: 'Field Employees' },
+  { to: '/dashboard/super-admin',     end: false, Icon: Shield,          label: 'Super Admin'     },
 ];
 
 const sidebarVariants = {
