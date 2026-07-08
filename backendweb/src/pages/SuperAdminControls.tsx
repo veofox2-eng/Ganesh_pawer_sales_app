@@ -269,7 +269,7 @@ export default function SuperAdminControls() {
             </div>
           ) : (
             <>
-              <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.1)' }}>
+              <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', background: 'transparent' }}>
                 <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text)' }}>
                   {selectedProfile.username || selectedProfile.full_name || selectedProfile.feature_flags?.email || 'Unknown User'}
                 </h2>
