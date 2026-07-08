@@ -94,12 +94,34 @@ app.post('/api/update-username', async (req, res) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(access_token);
     if (authError || !user) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { error } = await supabase
+    // Check if profile exists first
+    const { data: profile } = await supabase
       .from('profiles')
-      .update({ username: username.trim() })
-      .eq('id', user.id);
+      .select('id')
+      .eq('id', user.id)
+      .single();
 
-    if (error) throw error;
+    if (profile) {
+      // Profile exists, just update username
+      const { error } = await supabase
+        .from('profiles')
+        .update({ username: username.trim() })
+        .eq('id', user.id);
+      if (error) throw error;
+    } else {
+      // Profile missing (due to broken trigger on direct signup), so create it!
+      const { error } = await supabase
+        .from('profiles')
+        .insert([{ 
+          id: user.id, 
+          username: username.trim(),
+          role: 'User', // Default role for app signups
+          is_enabled: true,
+          approval_status: 'Pending' // Requires admin approval
+        }]);
+      if (error) throw error;
+    }
+
     res.json({ success: true });
   } catch (err: any) {
     console.error('Error updating username:', err);
