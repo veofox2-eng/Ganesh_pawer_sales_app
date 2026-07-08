@@ -129,6 +129,42 @@ app.post('/api/update-username', async (req, res) => {
   }
 });
 
+app.post('/api/delete-employee', async (req, res) => {
+  const { employee_id, admin_password } = req.body;
+  if (!employee_id || !admin_password) return res.status(400).json({ error: 'Missing employee ID or admin password' });
+
+  try {
+    // 1. Verify admin password
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: 'backendadmin1@gmail.com',
+      password: admin_password
+    });
+    
+    if (authError || !authData.user) {
+      return res.status(401).json({ error: 'Invalid admin password.' });
+    }
+
+    // 2. Perform manual cascade cleanup to prevent constraint errors
+    const { data: clients } = await supabase.from('clients').select('id').eq('user_id', employee_id);
+    if (clients && clients.length > 0) {
+      const clientIds = clients.map(c => c.id);
+      await supabase.from('interactions').delete().in('client_id', clientIds);
+    }
+    await supabase.from('interactions').delete().eq('user_id', employee_id);
+    await supabase.from('clients').delete().eq('user_id', employee_id);
+    await supabase.from('profiles').delete().eq('id', employee_id);
+
+    // 3. Delete the auth user
+    const { error: deleteError } = await supabase.auth.admin.deleteUser(employee_id);
+    if (deleteError) throw deleteError;
+
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Error deleting employee:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port} and accepting external connections`);
 });
