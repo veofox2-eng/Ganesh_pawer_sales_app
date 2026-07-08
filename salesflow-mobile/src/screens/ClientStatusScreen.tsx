@@ -9,9 +9,13 @@ import { spacing, radius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { 
   IconSearch, IconInfo, IconChevronRight, IconCloseCircle,
-  IconPeopleOutline, IconMenu
+  IconPeopleOutline, IconMenu, IconDownload, IconCloudUpload
 } from '../lib/Icons';
 import { useSidebar } from '../context/SidebarContext';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import * as XLSX from 'xlsx';
 
 interface Client {
   id: string;
@@ -33,6 +37,7 @@ export default function ClientStatusScreen() {
   const [showInfo, setShowInfo] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const headerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -87,6 +92,93 @@ export default function ClientStatusScreen() {
     }
   }
 
+  const handleDownloadSample = async () => {
+    try {
+      const ws = XLSX.utils.aoa_to_sheet([['NAME', 'PHONE NUMBER'], ['John Doe', '9876543210']]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Clients');
+      
+      const b64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+      const filename = FileSystem.documentDirectory + 'Sample_Clients_Upload.xlsx';
+      
+      await FileSystem.writeAsStringAsync(filename, b64, { encoding: FileSystem.EncodingType.Base64 });
+      
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(filename, { dialogTitle: 'Download Sample Excel' });
+      } else {
+        Alert.alert('Sharing not available', 'Cannot download file on this device.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message);
+    }
+  };
+
+  const handleUploadExcel = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv', '*/*'],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+      
+      setIsUploading(true);
+      const fileUri = result.assets[0].uri;
+      const b64 = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.Base64 });
+      
+      const wb = XLSX.read(b64, { type: 'base64' });
+      const wsname = wb.SheetNames[0];
+      const ws = wb.Sheets[wsname];
+      const data: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      
+      if (data.length < 2) {
+        throw new Error("File is empty or missing data rows.");
+      }
+
+      // Check header (row 0)
+      const headerRow = data[0];
+      if (!headerRow || !headerRow[0]?.toString().toLowerCase().includes('name') || !headerRow[1]?.toString().toLowerCase().includes('phone')) {
+        throw new Error("Invalid format. Column A must be NAME and Column B must be PHONE NUMBER.");
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated.");
+
+      const inserts = [];
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        if (!row || row.length === 0 || !row[0]) continue;
+        
+        const name = row[0].toString().trim();
+        const phone = row[1] ? row[1].toString().trim() : '';
+        
+        if (name) {
+          inserts.push({
+            name,
+            phone,
+            lead_type: 'Cold',
+            status: 'Follow-up',
+            user_id: user.id
+          });
+        }
+      }
+
+      if (inserts.length === 0) {
+        throw new Error("No valid client records found in the file.");
+      }
+
+      const { error } = await supabase.from('clients').insert(inserts);
+      if (error) throw error;
+
+      Alert.alert('Success', `Successfully imported ${inserts.length} clients!`);
+      fetchClients();
+    } catch (err: any) {
+      Alert.alert('Upload Failed', err.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const filtered = useMemo(() => {
     return clients.filter(c => {
       const matchesSearch = (c.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -136,8 +228,24 @@ function AnimatedClientCard({ c, index, colors, onPress }: { c: Client; index: n
 
   const renderHeader = () => (
     <View style={{ paddingTop: spacing.md, paddingBottom: spacing.sm }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
         <Animated.Text style={{ fontSize: 26, fontWeight: '900', color: colors.textPrimary, letterSpacing: -0.5, opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }] }}>Insights</Animated.Text>
+        
+        {/* Bulk Action Buttons */}
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity onPress={handleDownloadSample} style={[styles.actionBtn, { backgroundColor: colors.bgPanel, borderColor: colors.border, borderWidth: 1 }]}>
+            <IconDownload size={16} color={colors.textPrimary} />
+            <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Sample</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleUploadExcel} style={[styles.actionBtn, { backgroundColor: colors.accent }]} disabled={isUploading}>
+            {isUploading ? <ActivityIndicator size="small" color="#fff" /> : (
+              <>
+                <IconCloudUpload size={16} color="#fff" />
+                <Text style={[styles.actionBtnText, { color: '#fff' }]}>Upload</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
       <View style={[styles.searchWrap, { backgroundColor: colors.bgPanel, borderColor: colors.border }]}>
         <IconSearch size={18} color={colors.textMuted} />
@@ -276,6 +384,8 @@ function AnimatedClientCard({ c, index, colors, onPress }: { c: Client; index: n
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.md, gap: 6 },
+  actionBtnText: { fontSize: 13, fontWeight: '700' },
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, height: 46,
     borderRadius: radius.lg, borderWidth: 1, marginBottom: 12,
