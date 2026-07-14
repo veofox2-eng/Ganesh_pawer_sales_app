@@ -128,16 +128,6 @@ export default function LoginRoleScreen({ navigation }: any) {
         )}
       </View>
 
-      <View style={styles.footer}>
-        <Text style={[styles.footerText, { color: colors.textMuted }]}>SECURE ENTERPRISE-GRADE AUTHENTICATION</Text>
-        <TouchableOpacity 
-          style={styles.signupLink}
-          onPress={() => handleSelectRole(isSuperAdminApp ? 'SuperAdmin' : isAdminApp ? 'Admin' : 'User', 'signup')}
-        >
-          <Text style={{ color: colors.textMuted }}>New here? </Text>
-          <Text style={{ color: colors.accent, fontWeight: '700' }}>Create an Account</Text>
-        </TouchableOpacity>
-      </View>
     </ScrollView>
   );
 }

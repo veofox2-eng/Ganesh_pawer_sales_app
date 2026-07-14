@@ -109,17 +109,9 @@ app.post('/api/update-username', async (req, res) => {
         .eq('id', user.id);
       if (error) throw error;
     } else {
-      // Profile missing (due to broken trigger on direct signup), so create it!
-      const { error } = await supabase
-        .from('profiles')
-        .insert([{ 
-          id: user.id, 
-          username: username.trim(),
-          role: 'User', // Default role for app signups
-          is_enabled: true,
-          approval_status: 'Pending' // Requires admin approval
-        }]);
-      if (error) throw error;
+      // Profiles are strictly created via Access Control Portal
+      // If a profile doesn't exist, it means unauthorized direct signup
+      return res.status(403).json({ error: 'Account not found. All accounts must be created by an Administrator via the Access Control Portal.' });
     }
 
     res.json({ success: true });
