@@ -211,13 +211,14 @@ export default function AccessDashboard() {
     
     setAddUserLoading(true);
     try {
+      const dbRole = addUserData.role === 'Sales' ? 'User' : addUserData.role;
       const response = await fetch('https://ganesh-backend-3j1t.onrender.com/api/create-employee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: addUserData.email,
           password: addUserData.password,
-          role: addUserData.role,
+          role: dbRole,
           industry_position: addUserData.industry_position || undefined
         })
       });
@@ -554,7 +555,7 @@ export default function AccessDashboard() {
           >
             <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
               onClick={e => e.stopPropagation()}
-              style={{ background: 'var(--surface)', backdropFilter: 'blur(30px)', border: `1px solid ${actionData.type === 'DELETE' ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`, borderRadius: 20, padding: '2rem', width: '90%', maxWidth: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,1)' }}
+              style={{ background: 'var(--surface)', backdropFilter: 'blur(30px)', border: `1px solid ${actionData.type === 'DELETE' ? 'rgba(239,68,68,0.5)' : 'rgba(16,185,129,0.5)'}`, borderRadius: 20, padding: '2rem', width: '90%', maxWidth: 400, boxShadow: `0 0 30px ${actionData.type === 'DELETE' ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)'}, 0 24px 64px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,1)` }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.25rem', color: actionData.type === 'DELETE' ? '#ef4444' : '#10b981' }}>
                 {actionData.type === 'DELETE' ? <Trash2 size={24} /> : <CheckCircle size={24} />}
@@ -614,7 +615,7 @@ export default function AccessDashboard() {
           >
             <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
               onClick={e => e.stopPropagation()}
-              style={{ background: 'var(--surface)', backdropFilter: 'blur(30px)', border: '1px solid var(--border-dark)', borderTopColor: 'var(--border)', borderLeftColor: 'var(--border)', borderRadius: 20, padding: '2rem', width: '90%', maxWidth: 460, boxShadow: '0 24px 64px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,1)' }}
+              style={{ background: 'var(--surface)', backdropFilter: 'blur(30px)', border: '1px solid rgba(99,102,241,0.5)', borderRadius: 20, padding: '2rem', width: '90%', maxWidth: 460, boxShadow: '0 0 30px rgba(99,102,241,0.2), 0 24px 64px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,1)' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.5rem', color: 'var(--accent)' }}>
                 <UserPlus size={24} />

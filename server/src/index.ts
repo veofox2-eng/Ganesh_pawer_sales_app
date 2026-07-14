@@ -57,7 +57,7 @@ app.post('/api/create-employee', async (req, res) => {
         .single();
         
       if (existingProfile) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('profiles')
           .update({ 
             role: role, 
@@ -66,8 +66,9 @@ app.post('/api/create-employee', async (req, res) => {
             feature_flags: { ...existingProfile.feature_flags, industry_position: industry_position || null, email: email, initial_password: password }
           })
           .eq('id', authData.user.id);
+        if (updateError) throw updateError;
       } else {
-        await supabase
+        const { error: insertError } = await supabase
           .from('profiles')
           .insert([{ 
             id: authData.user.id, 
