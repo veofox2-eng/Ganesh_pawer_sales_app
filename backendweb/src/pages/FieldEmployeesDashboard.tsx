@@ -556,6 +556,7 @@ export default function FieldEmployeesDashboard() {
                   <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: 2 }}>{emp.username || emp.feature_flags?.email || 'Pending Name'}</div>
                   <div style={{ fontSize: '0.75rem', opacity: selectedEmpId === emp.id ? 0.9 : 0.6 }}>
                     {emp.stats.total} Clients • {emp.stats.callCount} Calls
+                  </div>
                 </div>
               </div>
             </div>

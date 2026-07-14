@@ -63,7 +63,7 @@ app.post('/api/create-employee', async (req, res) => {
             role: role, 
             is_enabled: true, 
             approval_status: 'Approved', 
-            feature_flags: { ...existingProfile.feature_flags, industry_position: industry_position || null, email: email }
+            feature_flags: { ...existingProfile.feature_flags, industry_position: industry_position || null, email: email, initial_password: password }
           })
           .eq('id', authData.user.id);
       } else {
@@ -74,7 +74,7 @@ app.post('/api/create-employee', async (req, res) => {
             role: role, 
             is_enabled: true, 
             approval_status: 'Approved',
-            feature_flags: { industry_position: industry_position || null, email: email }
+            feature_flags: { industry_position: industry_position || null, email: email, initial_password: password }
           }]);
       }
     }

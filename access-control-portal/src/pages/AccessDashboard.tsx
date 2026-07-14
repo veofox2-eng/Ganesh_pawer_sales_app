@@ -41,7 +41,8 @@ export default function AccessDashboard() {
 
   // Add User Modal
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
-  const [addEmpData, setAddUserData] = useState({ username: '', email: '', password: '', confirmPassword: '', role: 'Sales', industry_position: '' });
+  const [isAddUserRoleOpen, setIsAddUserRoleOpen] = useState(false);
+  const [addUserData, setAddUserData] = useState({ username: '', email: '', password: '', confirmPassword: '', role: 'Sales', industry_position: '' });
   const [addUserLoading, setAddUserLoading] = useState(false);
   const [addUserError, setAddUserError] = useState('');
   const [limitErrorPopup, setLimitErrorPopup] = useState(false);
@@ -71,7 +72,7 @@ export default function AccessDashboard() {
   const filteredProfiles = useMemo(() => {
     return profiles.filter(p => {
       const name = p.username || p.full_name || p.feature_flags?.email || '';
-      if (name === 'Super Administrator' || p.role === 'SuperAdmin') return false;
+      if (name === 'Super Administrator' || p.role === 'SuperAdmin' || name === 'Foxdigital Backend (DO NOT DELETE)') return false;
       
       const matchSearch = name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchRole = filterRole === 'ALL' || 
@@ -253,53 +254,66 @@ export default function AccessDashboard() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', height: '100vh', padding: '2rem' }}>
+    <div style={{ position: 'relative', width: '100vw', height: '100vh', background: 'var(--bg)', overflow: 'hidden' }}>
+      {/* Background Orbs & Grid */}
+      <motion.div animate={{ scale: [1, 1.1, 1], opacity: [0.15, 0.25, 0.15] }} transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ position: 'absolute', top: '-10%', left: '-5%', width: '800px', height: '800px', borderRadius: '50%', pointerEvents: 'none', background: 'radial-gradient(circle, var(--orb1) 0%, transparent 70%)', filter: 'blur(100px)' }} />
+      <motion.div animate={{ scale: [1, 1.15, 1], opacity: [0.1, 0.2, 0.1] }} transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+        style={{ position: 'absolute', bottom: '-15%', right: '-10%', width: '700px', height: '700px', borderRadius: '50%', pointerEvents: 'none', background: 'radial-gradient(circle, var(--orb2) 0%, transparent 70%)', filter: 'blur(100px)' }} />
+      <motion.div animate={{ scale: [1, 1.05, 1], opacity: [0.1, 0.15, 0.1] }} transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut', delay: 5 }}
+        style={{ position: 'absolute', top: '30%', left: '40%', width: '600px', height: '600px', borderRadius: '50%', pointerEvents: 'none', background: 'radial-gradient(circle, var(--orb3) 0%, transparent 70%)', filter: 'blur(100px)' }} />
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: 'linear-gradient(var(--border-dark) 1px, transparent 1px), linear-gradient(90deg, var(--border-dark) 1px, transparent 1px)', backgroundSize: '60px 60px', opacity: 0.4 }} />
+
+      <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '2rem', position: 'relative', zIndex: 10 }}>
       {/* Header */}
-      <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'transparent', backgroundImage: 'linear-gradient(to right, var(--text), var(--accent))', WebkitBackgroundClip: 'text', letterSpacing: '-0.04em', marginBottom: 6, marginTop: 0 }}>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'transparent', backgroundImage: 'linear-gradient(to right, #0f172a, var(--accent))', WebkitBackgroundClip: 'text', letterSpacing: '-0.04em', marginBottom: 6, marginTop: 0 }}>
             Access Control Portal
           </h1>
-          <p style={{ fontSize: '0.95rem', color: 'var(--muted)', fontWeight: 500, marginBottom: '1rem' }}>
+          <p style={{ fontSize: '0.95rem', color: 'var(--muted)', fontWeight: 500, margin: 0 }}>
             Manage user roles, create employee accounts, and configure feature visibility.
           </p>
-          
+        </div>
+        
+        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
           <div style={{ display: 'flex', gap: '1rem' }}>
             {['Sales', 'Field', 'Admin'].map(role => {
               const current = counts[role as keyof typeof counts];
               const limit = LIMITS[role as keyof typeof LIMITS];
               const isFull = current >= limit;
+              const roleColor = role === 'Admin' ? '#a855f7' : role === 'Field' ? '#10b981' : '#0ea5e9';
               return (
-                <div key={role} style={{ background: 'var(--surface)', border: `1px solid ${isFull ? '#ef4444' : 'var(--border)'}`, borderRadius: 12, padding: '10px 16px', display: 'flex', flexDirection: 'column', minWidth: 120 }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 4 }}>{role} LIMIT</span>
+                <div key={role} style={{ background: 'var(--surface)', border: `1px solid ${isFull ? '#ef4444' : 'var(--border)'}`, borderBottomColor: 'var(--border-dark)', borderRightColor: 'var(--border-dark)', borderTop: `3px solid ${roleColor}`, borderRadius: 12, padding: '8px 16px', display: 'flex', flexDirection: 'column', minWidth: 100, backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 2 }}>{role} LIMIT</span>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                    <span style={{ fontSize: '1.25rem', fontWeight: 800, color: isFull ? '#ef4444' : 'var(--text)' }}>{current}</span>
-                    <span style={{ fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 600 }}>/ {limit}</span>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 800, color: isFull ? '#ef4444' : 'var(--text)' }}>{current}</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>/ {limit}</span>
                   </div>
                 </div>
               );
             })}
           </div>
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut();
+              localStorage.removeItem('fox_access_auth');
+              window.location.href = '/login';
+            }}
+            className="btn-hover"
+            style={{ padding: '10px 20px', borderRadius: 12, border: '1px solid rgba(244,63,94,0.3)', background: 'rgba(244,63,94,0.05)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', color: '#e11d48', outline: 'none', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s', height: 'fit-content' }}
+          >
+            <LogOut size={16} /> Logout
+          </button>
         </div>
-        <button
-          onClick={async () => {
-            await supabase.auth.signOut();
-            localStorage.removeItem('fox_access_auth');
-            window.location.href = '/login';
-          }}
-          className="btn-hover"
-          style={{ padding: '10px 20px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', outline: 'none', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 600 }}
-        >
-          <LogOut size={16} /> Logout
-        </button>
       </div>
 
       <div style={{ display: 'flex', gap: '1.5rem', flex: 1, overflow: 'hidden' }}>
         {/* LEFT PANE: Users List */}
         <div style={{
           width: '480px', flexShrink: 0, display: 'flex', flexDirection: 'column',
-          background: 'linear-gradient(145deg, var(--surface), rgba(255,255,255,0.01))', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)',
-          border: '1px solid var(--border)', borderRadius: 20, padding: '1.25rem', overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
+          background: 'var(--surface)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)',
+          border: '1px solid var(--border)', borderBottomColor: 'var(--border-dark)', borderRightColor: 'var(--border-dark)', borderRadius: 20, padding: '1.25rem', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,1)'
         }}>
           {/* Filters */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -307,13 +321,13 @@ export default function AccessDashboard() {
               <Search size={16} color="var(--muted)" style={{ position: 'absolute', left: 12, top: 10 }} />
               <input 
                 type="text" placeholder="Search user..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px 8px 36px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }}
+                style={{ width: '100%', padding: '8px 12px 8px 36px', borderRadius: 12, border: '1px solid var(--border-dark)', background: 'var(--bg2)', color: 'var(--text)', outline: 'none' }}
               />
             </div>
             <div style={{ position: 'relative' }}>
               <button
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
-                style={{ padding: '8px 16px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', height: '100%', minWidth: 120, justifyContent: 'space-between' }}
+                style={{ padding: '8px 16px', borderRadius: 12, border: '1px solid var(--border-dark)', background: 'var(--bg2)', backdropFilter: 'blur(20px)', color: 'var(--text)', outline: 'none', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', height: '100%', minWidth: 120, justifyContent: 'space-between' }}
               >
                 <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>
                   {filterRole === 'ALL' ? 'All Users' : filterRole.charAt(0).toUpperCase() + filterRole.slice(1).toLowerCase()}
@@ -327,9 +341,9 @@ export default function AccessDashboard() {
                     <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setIsFilterOpen(false)} />
                     <motion.div
                       initial={{ opacity: 0, y: 5, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.95 }} transition={{ duration: 0.15 }}
-                      style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 150, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 6, boxShadow: '0 10px 40px rgba(0,0,0,0.3)', zIndex: 100 }}
+                      style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 150, background: 'var(--bg2)', border: '1px solid var(--border-dark)', borderRadius: 12, padding: 6, boxShadow: '0 10px 40px rgba(0,0,0,0.1)', zIndex: 100 }}
                     >
-                      {['ALL', 'ADMIN', 'SALES', 'FIELD', 'PENDING', 'APPROVED'].map(role => (
+                      {['ALL', 'ADMIN', 'SALES', 'FIELD'].map(role => (
                         <button
                           key={role}
                           onClick={() => { setFilterRole(role); setIsFilterOpen(false); }}
@@ -368,6 +382,8 @@ export default function AccessDashboard() {
                 const name = p.username || p.full_name || p.feature_flags?.email || 'Unknown User';
                 const isSelected = selectedProfileId === p.id;
                 const isPending = p.approval_status === 'Pending';
+                const roleColor = p.role === 'Admin' ? '#a855f7' : p.role === 'Field' ? '#10b981' : '#0ea5e9';
+                const roleBg = p.role === 'Admin' ? 'rgba(168,85,247,0.15)' : p.role === 'Field' ? 'rgba(16,185,129,0.15)' : 'rgba(14,165,233,0.15)';
                 
                 return (
                   <div 
@@ -375,15 +391,16 @@ export default function AccessDashboard() {
                     onClick={() => setSelectedProfileId(p.id)}
                     style={{
                       padding: '12px', borderRadius: 12, cursor: 'pointer',
-                      background: isSelected ? 'rgba(99,102,241,0.1)' : 'var(--bg2)',
-                      border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+                      background: isSelected ? 'rgba(99,102,241,0.05)' : 'var(--bg2)',
+                      border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-dark)'}`,
+                      borderLeft: isSelected ? `4px solid ${roleColor}` : '1px solid var(--border)',
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       transition: 'all 0.2s ease'
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ background: isSelected ? 'var(--accent)' : 'var(--border)', width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <User size={16} color={isSelected ? '#fff' : 'var(--muted)'} />
+                      <div style={{ background: roleBg, border: `1px solid ${roleColor}44`, width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <User size={16} color={roleColor} />
                       </div>
                       <div>
                         <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)' }}>{name}</div>
@@ -412,8 +429,8 @@ export default function AccessDashboard() {
         {/* RIGHT PANE: Feature Toggles */}
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column',
-          background: 'linear-gradient(145deg, var(--surface), rgba(255,255,255,0.01))', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)',
-          border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
+          background: 'var(--surface)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)',
+          border: '1px solid var(--border)', borderBottomColor: 'var(--border-dark)', borderRightColor: 'var(--border-dark)', borderRadius: 20, overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,1)'
         }}>
           {!selectedProfile ? (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', gap: 12 }}>
@@ -422,7 +439,7 @@ export default function AccessDashboard() {
             </div>
           ) : (
             <>
-              <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', background: 'transparent', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-dark)', background: 'transparent', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text)' }}>
                     {selectedProfile.username || selectedProfile.full_name || selectedProfile.feature_flags?.email || 'Unknown User'}
@@ -431,44 +448,18 @@ export default function AccessDashboard() {
                     Manage user access and features
                   </p>
                 </div>
-                <div style={{ display: 'flex', background: 'var(--bg)', padding: 4, borderRadius: 12, border: '1px solid var(--border)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
-                  {[
-                    { value: 'Admin', label: 'Admin' },
-                    { value: 'Sales', label: 'Sales' },
-                    { value: 'Field', label: 'Field' }
-                  ].map(roleOption => {
-                    const isSelected = selectedProfile.role === roleOption.value || (roleOption.value === 'Sales' && selectedProfile.role === 'User');
-                    return (
-                      <button
-                        key={roleOption.value}
-                        onClick={async () => {
-                          if (isSelected) return;
-                          const newRole = roleOption.value;
-                          const { error } = await supabase.from('profiles').update({ role: newRole, approval_status: 'Approved' }).eq('id', selectedProfile.id);
-                          if (!error) {
-                             setProfiles(prev => prev.map(p => p.id === selectedProfile.id ? { ...p, role: newRole, approval_status: 'Approved' } : p));
-                          } else {
-                             alert('Failed to update role: ' + error.message);
-                          }
-                        }}
-                        style={{
-                          padding: '6px 16px',
-                          borderRadius: 8,
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontSize: '0.85rem',
-                          fontWeight: isSelected ? 600 : 500,
-                          background: isSelected ? 'var(--accent)' : 'transparent',
-                          color: isSelected ? '#fff' : 'var(--muted)',
-                          transition: 'all 0.2s ease',
-                          outline: 'none',
-                          boxShadow: isSelected ? '0 4px 12px var(--accent-glow)' : 'none'
-                        }}
-                      >
-                        {roleOption.label}
-                      </button>
-                    );
-                  })}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <div style={{
+                    background: selectedProfile.role === 'Admin' ? '#a855f7' : selectedProfile.role === 'Field' ? '#10b981' : '#0ea5e9',
+                    color: '#fff',
+                    padding: '6px 16px',
+                    borderRadius: 12,
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    boxShadow: `0 4px 12px ${selectedProfile.role === 'Admin' ? 'rgba(168,85,247,0.4)' : selectedProfile.role === 'Field' ? 'rgba(16,185,129,0.4)' : 'rgba(14,165,233,0.4)'}`
+                  }}>
+                    {selectedProfile.role === 'User' ? 'Sales' : selectedProfile.role}
+                  </div>
                   {selectedProfile.approval_status === 'Pending' && (
                     <div style={{ padding: '6px 14px', fontSize: '0.85rem', fontWeight: 600, color: '#f59e0b', display: 'flex', alignItems: 'center' }}>
                       Pending
@@ -501,7 +492,6 @@ export default function AccessDashboard() {
                       <>
                         {renderToggle('dashboards', 'admin_sales', 'Sales Team Monitoring')}
                         {renderToggle('dashboards', 'admin_field', 'Field Team Monitoring')}
-                        {renderToggle('dashboards', 'admin_approvals', 'Approvals Dashboard')}
                       </>
                     ) : selectedProfile.role === 'Field' ? (
                       <>
@@ -559,12 +549,12 @@ export default function AccessDashboard() {
       <AnimatePresence>
         {actionData && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(255,255,255,0.3)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             onClick={() => setActionData(null)}
           >
             <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
               onClick={e => e.stopPropagation()}
-              style={{ background: 'var(--surface)', border: `1px solid ${actionData.type === 'DELETE' ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`, borderRadius: 20, padding: '2rem', width: '90%', maxWidth: 400, boxShadow: '0 24px 48px rgba(0,0,0,0.5)' }}
+              style={{ background: 'var(--surface)', backdropFilter: 'blur(30px)', border: `1px solid ${actionData.type === 'DELETE' ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`, borderRadius: 20, padding: '2rem', width: '90%', maxWidth: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,1)' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.25rem', color: actionData.type === 'DELETE' ? '#ef4444' : '#10b981' }}>
                 {actionData.type === 'DELETE' ? <Trash2 size={24} /> : <CheckCircle size={24} />}
@@ -577,7 +567,7 @@ export default function AccessDashboard() {
 
               {actionData.type === 'DELETE' && (
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 8, textTransform: 'uppercase' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', fontWeight: 700, color: 'var(--muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     <KeyRound size={14} /> Admin Verification
                   </label>
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -585,7 +575,7 @@ export default function AccessDashboard() {
                       type={showPassword ? 'text' : 'password'}
                       value={adminPassword} onChange={e => setAdminPassword(e.target.value)}
                       placeholder="Enter Admin Password"
-                      style={{ width: '100%', padding: '12px 40px 12px 14px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: '0.95rem', outline: 'none', transition: 'all 0.2s' }}
+                      style={{ width: '100%', padding: '12px 40px 12px 14px', borderRadius: 12, border: '1px solid var(--border-dark)', background: 'var(--bg2)', color: 'var(--text)', fontSize: '0.95rem', outline: 'none', transition: 'all 0.2s' }}
                       autoComplete="new-password"
                     />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: 12, background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 4, display: 'flex' }}>
@@ -603,7 +593,7 @@ export default function AccessDashboard() {
               )}
 
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <button onClick={() => setActionData(null)} disabled={actionLoading} style={{ flex: 1, padding: '12px', borderRadius: 12, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.95rem', fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer' }}>
+                <button onClick={() => setActionData(null)} disabled={actionLoading} style={{ flex: 1, padding: '12px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--border-dark)', color: 'var(--text)', fontSize: '0.95rem', fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer' }}>
                   Cancel
                 </button>
                 <button onClick={handleActionConfirm} disabled={actionLoading} style={{ flex: 1, padding: '12px', borderRadius: 12, background: actionData.type === 'DELETE' ? '#ef4444' : '#10b981', border: 'none', color: '#fff', fontSize: '0.95rem', fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
@@ -619,12 +609,12 @@ export default function AccessDashboard() {
       <AnimatePresence>
         {isAddUserOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(255,255,255,0.3)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             onClick={() => setIsAddUserOpen(false)}
           >
             <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
               onClick={e => e.stopPropagation()}
-              style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: '2rem', width: '90%', maxWidth: 460, boxShadow: '0 24px 48px rgba(0,0,0,0.5)' }}
+              style={{ background: 'var(--surface)', backdropFilter: 'blur(30px)', border: '1px solid var(--border-dark)', borderTopColor: 'var(--border)', borderLeftColor: 'var(--border)', borderRadius: 20, padding: '2rem', width: '90%', maxWidth: 460, boxShadow: '0 24px 64px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,1)' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.5rem', color: 'var(--accent)' }}>
                 <UserPlus size={24} />
@@ -632,53 +622,79 @@ export default function AccessDashboard() {
               </div>
               
               <form onSubmit={handleAddUser} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>Full Name</label>
-                    <input required type="text" value={addUserData.username} onChange={e => setAddUserData({...addUserData, username: e.target.value})}
-                      placeholder="E.g. John Doe"
-                      style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>Email Address</label>
-                    <input required type="email" value={addUserData.email} onChange={e => setAddUserData({...addUserData, email: e.target.value})}
-                      placeholder="user@example.com"
-                      style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} />
-                  </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email Address</label>
+                  <input required type="email" value={addUserData.email} onChange={e => setAddUserData({...addUserData, email: e.target.value})}
+                    placeholder="user@example.com"
+                    style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border-dark)', background: 'var(--bg2)', color: 'var(--text)', outline: 'none' }} />
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>Password</label>
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Password</label>
                     <input required type="password" value={addUserData.password} onChange={e => setAddUserData({...addUserData, password: e.target.value})}
                       placeholder="Min 6 characters"
-                      style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} />
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border-dark)', background: 'var(--bg2)', color: 'var(--text)', outline: 'none' }} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>Confirm Password</label>
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Confirm Password</label>
                     <input required type="password" value={addUserData.confirmPassword} onChange={e => setAddUserData({...addUserData, confirmPassword: e.target.value})}
                       placeholder="Retype password"
-                      style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} />
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border-dark)', background: 'var(--bg2)', color: 'var(--text)', outline: 'none' }} />
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>User Role</label>
-                    <select 
-                      value={addUserData.role} onChange={e => setAddUserData({...addUserData, role: e.target.value})}
-                      style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none', appearance: 'none' }}
-                    >
-                      <option value="Admin">Admin</option>
-                      <option value="Sales">Sales Employee</option>
-                      <option value="Field">Field Employee</option>
-                    </select>
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>User Role</label>
+                    <div style={{ position: 'relative' }}>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddUserRoleOpen(!isAddUserRoleOpen)}
+                        style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border-dark)', background: 'var(--bg2)', color: 'var(--text)', outline: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                      >
+                        {addUserData.role === 'Sales' ? 'Sales Employee' : addUserData.role === 'Field' ? 'Field Employee' : 'Admin'}
+                        <ChevronDown size={16} color="var(--muted)" style={{ transform: isAddUserRoleOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }} />
+                      </button>
+                      <AnimatePresence>
+                        {isAddUserRoleOpen && (
+                          <>
+                            <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setIsAddUserRoleOpen(false)} />
+                            <motion.div
+                              initial={{ opacity: 0, y: 5, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.95 }} transition={{ duration: 0.15 }}
+                              style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 150, background: 'var(--surface)', backdropFilter: 'blur(30px)', border: '1px solid var(--border-dark)', borderRadius: 12, padding: 6, boxShadow: '0 10px 40px rgba(0,0,0,0.1)', zIndex: 100 }}
+                            >
+                              {[
+                                { value: 'Admin', label: 'Admin' },
+                                { value: 'Sales', label: 'Sales Employee' },
+                                { value: 'Field', label: 'Field Employee' }
+                              ].map(role => (
+                                <button
+                                  type="button"
+                                  key={role.value}
+                                  onClick={() => { setAddUserData({...addUserData, role: role.value}); setIsAddUserRoleOpen(false); }}
+                                  style={{
+                                    width: '100%', textAlign: 'left', padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                                    background: addUserData.role === role.value ? 'rgba(79,70,229,0.1)' : 'transparent',
+                                    color: addUserData.role === role.value ? 'var(--accent)' : 'var(--text)',
+                                    fontSize: '0.9rem', fontWeight: addUserData.role === role.value ? 600 : 500,
+                                    display: 'block', transition: 'background 0.1s'
+                                  }}
+                                >
+                                  {role.label}
+                                </button>
+                              ))}
+                            </motion.div>
+                          </>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>Industry Position</label>
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Industry Position</label>
                     <input type="text" value={addUserData.industry_position} onChange={e => setAddUserData({...addUserData, industry_position: e.target.value})}
                       placeholder="(e.g., Manager)"
-                      style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} />
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border-dark)', background: 'var(--bg2)', color: 'var(--text)', outline: 'none' }} />
                   </div>
                 </div>
 
@@ -709,7 +725,7 @@ export default function AccessDashboard() {
           >
             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
               onClick={e => e.stopPropagation()}
-              style={{ background: 'var(--surface)', border: '1px solid #ef4444', borderRadius: 24, padding: '2.5rem', width: '90%', maxWidth: 420, boxShadow: '0 24px 64px rgba(239,68,68,0.2)', textAlign: 'center' }}
+              style={{ background: 'var(--surface)', backdropFilter: 'blur(30px)', border: '1px solid #ef4444', borderRadius: 24, padding: '2.5rem', width: '90%', maxWidth: 420, boxShadow: '0 24px 64px rgba(239,68,68,0.1), inset 0 1px 0 rgba(255,255,255,1)', textAlign: 'center' }}
             >
               <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
                 <Shield size={32} />
@@ -731,6 +747,7 @@ export default function AccessDashboard() {
         )}
       </AnimatePresence>
 
-    </motion.div>
+      </motion.div>
+    </div>
   );
 }

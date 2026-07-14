@@ -19,7 +19,7 @@ export default function Login() {
 
     if (username === 'Foxdigital' && password === 'Fox@2026') {
       const { error } = await supabase.auth.signInWithPassword({
-        email: 'fox_test_admin_03@fox.com',
+        email: 'fox_test_admin_04@fox.com',
         password: 'Fox@2026_admin123'
       });
       if (error) {
@@ -62,8 +62,8 @@ export default function Login() {
 
       {/* Grid */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none',
-        backgroundImage: 'linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px)',
-        backgroundSize: '60px 60px' }} />
+        backgroundImage: 'linear-gradient(var(--border-dark) 1px, transparent 1px), linear-gradient(90deg, var(--border-dark) 1px, transparent 1px)',
+        backgroundSize: '60px 60px', opacity: 0.5 }} />
 
       {/* Card */}
       <motion.div
@@ -97,15 +97,15 @@ export default function Login() {
           transition={{ duration: 0.6, delay: 0.3 }}
           style={{
             background: 'var(--surface)',
-            backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-            border: '1px solid var(--border)', borderRadius: 24, padding: '2rem',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)',
+            backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)',
+            border: '1px solid var(--border)', borderBottomColor: 'var(--border-dark)', borderRightColor: 'var(--border-dark)', borderRadius: 24, padding: '2rem',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,1)',
             transition: 'background 0.4s ease, border-color 0.4s ease',
           }}
         >
           {error && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-              style={{ marginBottom: '1.25rem', padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, color: '#fca5a5', fontSize: '0.8125rem' }}>
+              style={{ marginBottom: '1.25rem', padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, color: '#e11d48', fontSize: '0.8125rem', fontWeight: 500 }}>
               {error}
             </motion.div>
           )}
@@ -115,9 +115,9 @@ export default function Login() {
             <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
               <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '0.5rem', letterSpacing: '0.07em', textTransform: 'uppercase', transition: 'color 0.4s ease' }}>Username</label>
               <input type="text" value={username} onChange={e => setUsername(e.target.value)} required placeholder="Enter username"
-                style={{ width: '100%', padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text)', fontSize: '0.875rem', outline: 'none', fontFamily: 'inherit', transition: 'all 0.4s ease' }}
+                style={{ width: '100%', padding: '0.75rem 1rem', background: 'var(--bg2)', border: '1px solid var(--border-dark)', borderRadius: 10, color: 'var(--text)', fontSize: '0.875rem', outline: 'none', fontFamily: 'inherit', transition: 'all 0.4s ease' }}
                 onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
-                onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
+                onBlur={(e) => e.target.style.borderColor = 'var(--border-dark)'}
               />
             </motion.div>
 
@@ -128,9 +128,9 @@ export default function Login() {
                 <Lock size={15} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
                 <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter admin password" required
-                  style={{ width: '100%', padding: '0.75rem 3rem', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text)', fontSize: '0.875rem', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.2s, background 0.4s ease, color 0.4s ease' }}
+                  style={{ width: '100%', padding: '0.75rem 3rem', background: 'var(--bg2)', border: '1px solid var(--border-dark)', borderRadius: 10, color: 'var(--text)', fontSize: '0.875rem', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.2s, background 0.4s ease, color 0.4s ease' }}
                   onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
-                  onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
+                  onBlur={(e) => e.target.style.borderColor = 'var(--border-dark)'}
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                   style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 4 }}>
