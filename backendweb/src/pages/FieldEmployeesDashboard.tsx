@@ -528,15 +528,7 @@ export default function FieldEmployeesDashboard() {
               <Users size={18} color="var(--accent)" />
               Field Roster
             </h2>
-            <button 
-              onClick={() => setShowAddEmployeePopup(true)}
-              className="btn-hover"
-              style={{ background: 'var(--accent)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-            >
-              <UserPlus size={14} /> Add
-            </button>
-          </div>
-          <div style={{ position: 'relative' }}>
+          </div>          <div style={{ position: 'relative' }}>
             <Search size={14} color="var(--muted)" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
             <input 
               type="text" 
@@ -564,20 +556,7 @@ export default function FieldEmployeesDashboard() {
                   <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: 2 }}>{emp.username || emp.feature_flags?.email || 'Pending Name'}</div>
                   <div style={{ fontSize: '0.75rem', opacity: selectedEmpId === emp.id ? 0.9 : 0.6 }}>
                     {emp.stats.total} Clients • {emp.stats.callCount} Calls
-                  </div>
                 </div>
-                <button 
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    setDeleteEmployeeData({ id: emp.id, name: emp.username || emp.feature_flags?.email || 'Unknown' }); 
-                    setDeleteAdminPassword(''); 
-                    setDeleteError(''); 
-                  }}
-                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', opacity: 0.7 }}
-                  title="Delete Employee"
-                >
-                  <Trash2 size={16} color={selectedEmpId === emp.id ? "#fff" : "var(--danger, #ef4444)"} />
-                </button>
               </div>
             </div>
           ))}

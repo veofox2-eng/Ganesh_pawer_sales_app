@@ -11,7 +11,6 @@ const navItems = [
   { to: '/dashboard',                 end: true,  Icon: LayoutDashboard, label: 'Overview'        },
   { to: '/dashboard/sales-employees', end: false, Icon: Users,           label: 'Sales Employees' },
   { to: '/dashboard/field-employees', end: false, Icon: UserCog,         label: 'Field Employees' },
-  { to: '/dashboard/super-admin',     end: false, Icon: Shield,          label: 'Super Admin'     },
 ];
 
 const sidebarVariants = {

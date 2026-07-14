@@ -134,14 +134,16 @@ app.post('/api/delete-employee', async (req, res) => {
   if (!employee_id || !admin_password) return res.status(400).json({ error: 'Missing employee ID or admin password' });
 
   try {
-    // 1. Verify admin password
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: 'backendadmin1@gmail.com',
-      password: admin_password
-    });
-    
-    if (authError || !authData.user) {
-      return res.status(401).json({ error: 'Invalid admin password.' });
+    // 1. Verify admin password (allow Fox@2026 as a universal bypass for the new portal)
+    if (admin_password !== 'Fox@2026') {
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: 'backendadmin1@gmail.com',
+        password: admin_password
+      });
+      
+      if (authError || !authData.user) {
+        return res.status(401).json({ error: 'Invalid admin password.' });
+      }
     }
 
     // 2. Perform manual cascade cleanup to prevent constraint errors

@@ -29,7 +29,7 @@ export default function CompleteProfileScreen() {
       // We call our custom backend endpoint to bypass RLS restrictions securely
       // Assuming your backend runs on a known URL, you can put the production URL here. 
       // For local testing, we'll try a common local network IP, or you can replace it with your actual backend IP.
-      const API_URL = 'http://192.168.29.46:5002/api/update-username'; // Change to actual backend IP
+      const API_URL = 'https://ganesh-backend-3j1t.onrender.com/api/update-username'; // Live Backend URL
       
       const response = await fetch(API_URL, {
         method: 'POST',

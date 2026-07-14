@@ -17,6 +17,7 @@ import {
   IconClose, IconFlame, IconTime, IconCheckmarkDone, IconMenu,
 } from '../lib/Icons';
 import { useSidebar } from '../context/SidebarContext';
+import { useAuth } from '../context/AuthContext';
 
 type Priority = 'Low' | 'Medium' | 'High';
 
@@ -40,6 +41,7 @@ const CARD_WIDTH = (width - spacing.lg * 2 - 10) / 2;
 export default function TaskBoardScreen() {
   const { colors } = useTheme();
   const { openSidebar } = useSidebar();
+  const { profile } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -360,7 +362,7 @@ export default function TaskBoardScreen() {
       </View>
 
       {/* Summary Cards */}
-      <View style={styles.summaryRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.summaryRow}>
         {[
           { label: 'Pending', count: pending.length, color: colors.warning, Icon: IconTime },
           { label: 'Done', count: done.length, color: colors.success, Icon: IconCheckmarkDone },
@@ -374,7 +376,7 @@ export default function TaskBoardScreen() {
             <Text style={styles.summaryLabel}>{label}</Text>
           </View>
         ))}
-      </View>
+      </ScrollView>
 
       {/* Priority Filter */}
       <View style={styles.filterRow}>
@@ -622,7 +624,7 @@ function getStyles(colors: AppColors) {
       flexDirection: 'row', gap: 10, paddingHorizontal: spacing.lg, marginBottom: spacing.sm,
     },
     summaryCard: {
-      flex: 1, backgroundColor: colors.bgCard, borderRadius: radius.lg,
+      flex: 1, minWidth: 105, backgroundColor: colors.bgCard, borderRadius: radius.lg,
       borderWidth: 1, borderColor: colors.border, padding: spacing.md,
       alignItems: 'center', minHeight: 90, maxHeight: 110, justifyContent: 'center',
     },

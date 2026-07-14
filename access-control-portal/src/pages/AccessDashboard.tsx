@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
-import { Shield, Search, User, Trash2, CheckCircle, Eye, EyeOff, KeyRound, ChevronDown, UserPlus } from 'lucide-react';
+import { Shield, Search, User, Trash2, CheckCircle, Eye, EyeOff, KeyRound, ChevronDown, UserPlus, LogOut } from 'lucide-react';
 
 const DEFAULT_FEATURES = {
   dashboards: {
@@ -18,7 +18,13 @@ const DEFAULT_FEATURES = {
   }
 };
 
-export default function SuperAdminControls() {
+const LIMITS = {
+  Sales: 10,
+  Field: 10,
+  Admin: 5
+};
+
+export default function AccessDashboard() {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -35,11 +41,20 @@ export default function SuperAdminControls() {
 
   // Add User Modal
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
-  const [addUserData, setAddUserData] = useState({ username: '', email: '', password: '', role: 'Admin' });
+  const [addEmpData, setAddUserData] = useState({ username: '', email: '', password: '', confirmPassword: '', role: 'Sales', industry_position: '' });
   const [addUserLoading, setAddUserLoading] = useState(false);
   const [addUserError, setAddUserError] = useState('');
+  const [limitErrorPopup, setLimitErrorPopup] = useState(false);
 
   const selectedProfile = useMemo(() => profiles.find(p => p.id === selectedProfileId), [profiles, selectedProfileId]);
+
+  const counts = useMemo(() => {
+    return {
+      Sales: profiles.filter(p => p.role === 'Sales' || p.role === 'User').length,
+      Field: profiles.filter(p => p.role === 'Field').length,
+      Admin: profiles.filter(p => p.role === 'Admin').length,
+    };
+  }, [profiles]);
 
   useEffect(() => {
     fetchProfiles();
@@ -56,8 +71,7 @@ export default function SuperAdminControls() {
   const filteredProfiles = useMemo(() => {
     return profiles.filter(p => {
       const name = p.username || p.full_name || p.feature_flags?.email || '';
-      // Hide the Super Administrator from being managed here
-      if (name === 'Super Administrator') return false;
+      if (name === 'Super Administrator' || p.role === 'SuperAdmin') return false;
       
       const matchSearch = name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchRole = filterRole === 'ALL' || 
@@ -84,13 +98,11 @@ export default function SuperAdminControls() {
     if (!updated.actions) updated.actions = DEFAULT_FEATURES.actions;
     if (!updated.background) updated.background = DEFAULT_FEATURES.background;
 
-    // Optimistic UI update
     setProfiles(prev => prev.map(p => p.id === selectedProfile.id ? { ...p, feature_flags: updated } : p));
-
     const { error } = await supabase.from('profiles').update({ feature_flags: updated }).eq('id', selectedProfile.id);
     if (error) {
       alert("Failed to save feature flag: " + error.message);
-      fetchProfiles(); // rollback
+      fetchProfiles();
     }
   }
 
@@ -98,7 +110,7 @@ export default function SuperAdminControls() {
     if (!selectedProfile) return null;
     const features = selectedProfile.feature_flags || DEFAULT_FEATURES;
     const catObj = features[category] || (DEFAULT_FEATURES as any)[category];
-    const isEnabled = catObj[key] !== false; // true if missing or true
+    const isEnabled = catObj[key] !== false;
 
     return (
       <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
@@ -152,13 +164,16 @@ export default function SuperAdminControls() {
       }
       
       try {
-        const { data, error } = await supabase.functions.invoke('delete-user', {
-          body: { employee_id: actionData.id }
+        const response = await fetch('https://ganesh-backend-3j1t.onrender.com/api/delete-employee', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            employee_id: actionData.id,
+            admin_password: adminPassword
+          })
         });
-        
-        if (error) {
-          throw new Error(error.message || 'Failed to delete user');
-        }
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to delete employee');
         
         await fetchProfiles();
         setActionData(null);
@@ -175,20 +190,40 @@ export default function SuperAdminControls() {
   async function handleAddUser(e: React.FormEvent) {
     e.preventDefault();
     setAddUserError('');
+    if (!addUserData.email || !addUserData.password || !addUserData.role) {
+      setAddUserError('Please fill all fields');
+      return;
+    }
+    if (addUserData.password !== addUserData.confirmPassword) {
+      setAddUserError('Passwords do not match');
+      return;
+    }
+
+    if (
+      (addUserData.role === 'Sales' && counts.Sales >= LIMITS.Sales) ||
+      (addUserData.role === 'Field' && counts.Field >= LIMITS.Field) ||
+      (addUserData.role === 'Admin' && counts.Admin >= LIMITS.Admin)
+    ) {
+      setLimitErrorPopup(true);
+      return;
+    }
+    
     setAddUserLoading(true);
-
     try {
-      const { data, error } = await supabase.functions.invoke('create-user', {
-        body: addUserData
+      const response = await fetch('https://ganesh-backend-3j1t.onrender.com/api/create-employee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: addUserData.email,
+          password: addUserData.password,
+          role: addUserData.role,
+          industry_position: addUserData.industry_position || undefined
+        })
       });
-
-      if (error) {
-        throw new Error(error.message || 'Failed to create user');
-      }
-
-      // Store the initial credentials in feature_flags so the Super Admin can view them
-      if (data?.user?.id) {
-        // Wait for the database trigger to create the profile row
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to create employee');
+      
+      if (data.user?.id) {
         let existing = null;
         for (let i = 0; i < 5; i++) {
           const res = await supabase.from('profiles').select('feature_flags').eq('id', data.user.id).single();
@@ -196,7 +231,7 @@ export default function SuperAdminControls() {
             existing = res.data;
             break;
           }
-          await new Promise(resolve => setTimeout(resolve, 500)); // wait 500ms before retry
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
 
         const newFlags = {
@@ -204,38 +239,65 @@ export default function SuperAdminControls() {
           email: addUserData.email,
           initial_password: addUserData.password
         };
-        await supabase.from('profiles').update({ feature_flags: newFlags }).eq('id', data.user.id);
+        await supabase.from('profiles').update({ feature_flags: newFlags, username: addUserData.username }).eq('id', data.user.id);
       }
 
-      // Success
       setIsAddUserOpen(false);
-      setAddUserData({ username: '', email: '', password: '', role: 'Admin' });
+      setAddUserData({ username: '', email: '', password: '', confirmPassword: '', role: 'Sales', industry_position: '' });
       await fetchProfiles();
     } catch (err: any) {
-      setAddUserError(err.message);
+      setAddUserError(err.message || 'Something went wrong');
     } finally {
       setAddUserLoading(false);
     }
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
+    <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', height: '100vh', padding: '2rem' }}>
       {/* Header */}
-      <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'transparent', backgroundImage: 'linear-gradient(to right, var(--text), var(--accent))', WebkitBackgroundClip: 'text', letterSpacing: '-0.04em', marginBottom: 6 }}>
-            Super Admin Controls
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'transparent', backgroundImage: 'linear-gradient(to right, var(--text), var(--accent))', WebkitBackgroundClip: 'text', letterSpacing: '-0.04em', marginBottom: 6, marginTop: 0 }}>
+            Access Control Portal
           </h1>
-          <p style={{ fontSize: '0.95rem', color: 'var(--muted)', fontWeight: 500 }}>
-            Manage user roles, approvals, and feature visibility.
+          <p style={{ fontSize: '0.95rem', color: 'var(--muted)', fontWeight: 500, marginBottom: '1rem' }}>
+            Manage user roles, create employee accounts, and configure feature visibility.
           </p>
+          
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            {['Sales', 'Field', 'Admin'].map(role => {
+              const current = counts[role as keyof typeof counts];
+              const limit = LIMITS[role as keyof typeof LIMITS];
+              const isFull = current >= limit;
+              return (
+                <div key={role} style={{ background: 'var(--surface)', border: `1px solid ${isFull ? '#ef4444' : 'var(--border)'}`, borderRadius: 12, padding: '10px 16px', display: 'flex', flexDirection: 'column', minWidth: 120 }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 4 }}>{role} LIMIT</span>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                    <span style={{ fontSize: '1.25rem', fontWeight: 800, color: isFull ? '#ef4444' : 'var(--text)' }}>{current}</span>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 600 }}>/ {limit}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
+        <button
+          onClick={async () => {
+            await supabase.auth.signOut();
+            localStorage.removeItem('fox_access_auth');
+            window.location.href = '/login';
+          }}
+          className="btn-hover"
+          style={{ padding: '10px 20px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', outline: 'none', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 600 }}
+        >
+          <LogOut size={16} /> Logout
+        </button>
       </div>
 
       <div style={{ display: 'flex', gap: '1.5rem', flex: 1, overflow: 'hidden' }}>
         {/* LEFT PANE: Users List */}
         <div style={{
-          width: '380px', flexShrink: 0, display: 'flex', flexDirection: 'column',
+          width: '480px', flexShrink: 0, display: 'flex', flexDirection: 'column',
           background: 'linear-gradient(145deg, var(--surface), rgba(255,255,255,0.01))', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)',
           border: '1px solid var(--border)', borderRadius: 20, padding: '1.25rem', overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
         }}>
@@ -265,7 +327,7 @@ export default function SuperAdminControls() {
                     <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setIsFilterOpen(false)} />
                     <motion.div
                       initial={{ opacity: 0, y: 5, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.95 }} transition={{ duration: 0.15 }}
-                      style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 150, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 6, boxShadow: '0 10px 40px rgba(0,0,0,0.15)', zIndex: 100 }}
+                      style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 150, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 6, boxShadow: '0 10px 40px rgba(0,0,0,0.3)', zIndex: 100 }}
                     >
                       {['ALL', 'ADMIN', 'SALES', 'FIELD', 'PENDING', 'APPROVED'].map(role => (
                         <button
@@ -289,13 +351,14 @@ export default function SuperAdminControls() {
             </div>
             <button
               onClick={() => setIsAddUserOpen(true)}
+              className="btn-hover"
               style={{ padding: '8px 16px', borderRadius: 12, border: 'none', background: 'var(--accent)', color: '#fff', outline: 'none', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', height: '100%', fontWeight: 600, transition: '0.2s', boxShadow: '0 4px 14px var(--accent-glow)' }}
             >
-              <UserPlus size={16} /> Add User
+              <UserPlus size={16} /> Add Employee
             </button>
           </div>
 
-          <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 4 }}>
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 4 }}>
             {loading ? (
               <div style={{ color: 'var(--muted)', textAlign: 'center', marginTop: 20 }}>Loading...</div>
             ) : filteredProfiles.length === 0 ? (
@@ -355,7 +418,7 @@ export default function SuperAdminControls() {
           {!selectedProfile ? (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', gap: 12 }}>
               <Shield size={48} opacity={0.2} />
-              <p>Select a user to manage their features.</p>
+              <p>Select a user to manage their access & features.</p>
             </div>
           ) : (
             <>
@@ -371,10 +434,10 @@ export default function SuperAdminControls() {
                 <div style={{ display: 'flex', background: 'var(--bg)', padding: 4, borderRadius: 12, border: '1px solid var(--border)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
                   {[
                     { value: 'Admin', label: 'Admin' },
-                    { value: 'User', label: 'Sales' },
+                    { value: 'Sales', label: 'Sales' },
                     { value: 'Field', label: 'Field' }
                   ].map(roleOption => {
-                    const isSelected = selectedProfile.role === roleOption.value;
+                    const isSelected = selectedProfile.role === roleOption.value || (roleOption.value === 'Sales' && selectedProfile.role === 'User');
                     return (
                       <button
                         key={roleOption.value}
@@ -406,7 +469,7 @@ export default function SuperAdminControls() {
                       </button>
                     );
                   })}
-                  {selectedProfile.role === 'Pending' && (
+                  {selectedProfile.approval_status === 'Pending' && (
                     <div style={{ padding: '6px 14px', fontSize: '0.85rem', fontWeight: 600, color: '#f59e0b', display: 'flex', alignItems: 'center' }}>
                       Pending
                     </div>
@@ -414,10 +477,10 @@ export default function SuperAdminControls() {
                 </div>
               </div>
 
-              <div className="custom-scrollbar" style={{ flex: 1, padding: '1.5rem', overflowY: 'auto' }}>
+              <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto' }}>
                 {selectedProfile.feature_flags?.email && selectedProfile.feature_flags?.initial_password && (
                   <div style={{ marginBottom: '2rem', padding: '1.25rem', background: 'rgba(99,102,241,0.05)', borderRadius: 12, border: '1px solid rgba(99,102,241,0.2)' }}>
-                    <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 16 }}>Login Credentials</h3>
+                    <h3 style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 16 }}>Login Credentials</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                       <div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Email ID</div>
@@ -432,7 +495,7 @@ export default function SuperAdminControls() {
                 )}
 
                 <div style={{ marginBottom: '2rem' }}>
-                  <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Dashboards & Main Screens</h3>
+                  <h3 style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Dashboards & Main Screens</h3>
                   <div style={{ background: 'var(--bg2)', padding: '0 16px', borderRadius: 12, border: '1px solid var(--border)' }}>
                     {selectedProfile.role?.includes('Admin') ? (
                       <>
@@ -462,7 +525,7 @@ export default function SuperAdminControls() {
                 </div>
 
                 <div style={{ marginBottom: '2rem' }}>
-                  <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Client & Lead Actions</h3>
+                  <h3 style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Client & Lead Actions</h3>
                   <div style={{ background: 'var(--bg2)', padding: '0 16px', borderRadius: 12, border: '1px solid var(--border)' }}>
                     {renderToggle('actions', 'dialer', 'Dialer & Calling')}
                     {renderToggle('actions', 'whatsapp', 'Send WhatsApp Messages')}
@@ -473,7 +536,7 @@ export default function SuperAdminControls() {
                 </div>
 
                 <div style={{ marginBottom: '2rem' }}>
-                  <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Background Services</h3>
+                  <h3 style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Background Services</h3>
                   <div style={{ background: 'var(--bg2)', padding: '0 16px', borderRadius: 12, border: '1px solid var(--border)' }}>
                     {renderToggle('background', 'auto_call_record', 'Automatic Call Recording')}
                     {renderToggle('background', 'live_location', 'Live Location Tracking')}
@@ -481,7 +544,7 @@ export default function SuperAdminControls() {
                 </div>
 
                 <div style={{ marginBottom: '1rem' }}>
-                  <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Global Features</h3>
+                  <h3 style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Global Features</h3>
                   <div style={{ background: 'var(--bg2)', padding: '0 16px', borderRadius: 12, border: '1px solid var(--border)' }}>
                     {renderToggle('dashboards', 'settings', 'Settings Menu Access')}
                   </div>
@@ -561,36 +624,62 @@ export default function SuperAdminControls() {
           >
             <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
               onClick={e => e.stopPropagation()}
-              style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: '2rem', width: '90%', maxWidth: 420, boxShadow: '0 24px 48px rgba(0,0,0,0.5)' }}
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: '2rem', width: '90%', maxWidth: 460, boxShadow: '0 24px 48px rgba(0,0,0,0.5)' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.5rem', color: 'var(--accent)' }}>
                 <UserPlus size={24} />
-                <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text)' }}>Create New Account</h3>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text)' }}>Create Employee Account</h3>
               </div>
               
               <form onSubmit={handleAddUser} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>Full Name</label>
-                  <input required type="text" value={addUserData.username} onChange={e => setAddUserData({...addUserData, username: e.target.value})}
-                    placeholder="E.g. John Doe"
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} />
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>Full Name</label>
+                    <input required type="text" value={addUserData.username} onChange={e => setAddUserData({...addUserData, username: e.target.value})}
+                      placeholder="E.g. John Doe"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>Email Address</label>
+                    <input required type="email" value={addUserData.email} onChange={e => setAddUserData({...addUserData, email: e.target.value})}
+                      placeholder="user@example.com"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} />
+                  </div>
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>Email Address</label>
-                  <input required type="email" value={addUserData.email} onChange={e => setAddUserData({...addUserData, email: e.target.value})}
-                    placeholder="user@example.com"
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} />
+
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>Password</label>
+                    <input required type="password" value={addUserData.password} onChange={e => setAddUserData({...addUserData, password: e.target.value})}
+                      placeholder="Min 6 characters"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>Confirm Password</label>
+                    <input required type="password" value={addUserData.confirmPassword} onChange={e => setAddUserData({...addUserData, confirmPassword: e.target.value})}
+                      placeholder="Retype password"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} />
+                  </div>
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>Initial Password</label>
-                  <input required type="text" value={addUserData.password} onChange={e => setAddUserData({...addUserData, password: e.target.value})}
-                    placeholder="Must be at least 6 characters"
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>Role</label>
-                  <input type="text" value="Admin" readOnly
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', outline: 'none', cursor: 'not-allowed' }} />
+
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>User Role</label>
+                    <select 
+                      value={addUserData.role} onChange={e => setAddUserData({...addUserData, role: e.target.value})}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none', appearance: 'none' }}
+                    >
+                      <option value="Admin">Admin</option>
+                      <option value="Sales">Sales Employee</option>
+                      <option value="Field">Field Employee</option>
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>Industry Position</label>
+                    <input type="text" value={addUserData.industry_position} onChange={e => setAddUserData({...addUserData, industry_position: e.target.value})}
+                      placeholder="(e.g., Manager)"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} />
+                  </div>
                 </div>
 
                 {addUserError && (
@@ -606,6 +695,37 @@ export default function SuperAdminControls() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Limit Exceeded Popup */}
+      <AnimatePresence>
+        {limitErrorPopup && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={() => setLimitErrorPopup(false)}
+          >
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              onClick={e => e.stopPropagation()}
+              style={{ background: 'var(--surface)', border: '1px solid #ef4444', borderRadius: 24, padding: '2.5rem', width: '90%', maxWidth: 420, boxShadow: '0 24px 64px rgba(239,68,68,0.2)', textAlign: 'center' }}
+            >
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                <Shield size={32} />
+              </div>
+              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.5rem', fontWeight: 800, color: 'var(--text)' }}>Limit Exceeded</h3>
+              <p style={{ color: 'var(--muted)', fontSize: '1rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+                You have reached the maximum allowed accounts for this role.
+                <br /><br />
+                <span style={{ color: 'var(--text)', fontWeight: 600 }}>Please contact Fox Digital</span> to upgrade your plan or increase your limit.
+              </p>
+              <button 
+                onClick={() => setLimitErrorPopup(false)}
+                style={{ width: '100%', padding: '14px', borderRadius: 14, background: '#ef4444', border: 'none', color: '#fff', fontSize: '1rem', fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 24px rgba(239,68,68,0.3)' }}
+              >
+                Understood
+              </button>
             </motion.div>
           </motion.div>
         )}

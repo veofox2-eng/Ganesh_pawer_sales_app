@@ -260,7 +260,7 @@ export default function ClientDetailScreen({ route, navigation }: any) {
     if (!showAddClientModal) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       setShowAddClientModal(false);
-      if (route.params?.openEdit) navigation.goBack();
+      if (route.params?.openEdit || route.params?.isNew || !client) navigation.goBack();
       return true;
     });
     return () => sub.remove();
@@ -391,7 +391,7 @@ export default function ClientDetailScreen({ route, navigation }: any) {
         reminder_date: data.reminder_date || '',
       });
       setShowAddClientModal(false);
-      if (route.params?.openEdit) navigation.goBack();
+      if (route.params?.openEdit || route.params?.isNew || !client) navigation.goBack();
       // Admin Lock Fields
 
       // Log update
@@ -449,7 +449,7 @@ export default function ClientDetailScreen({ route, navigation }: any) {
       }
       setClient(data);
       setShowAddClientModal(false);
-      if (route.params?.openEdit) navigation.goBack();
+      if (route.params?.openEdit || route.params?.isNew || !client) navigation.goBack();
 
       // Persist pending interactions
       if (pendingInteractions.length > 0) {
@@ -953,7 +953,7 @@ export default function ClientDetailScreen({ route, navigation }: any) {
       <Modal visible={showAddClientModal} animationType="slide" presentationStyle="pageSheet" statusBarTranslucent>
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => { setShowAddClientModal(false); if (route.params?.openEdit) navigation.goBack(); }} style={{ padding: 4 }}>
+            <TouchableOpacity onPress={() => { setShowAddClientModal(false); if (route.params?.openEdit || route.params?.isNew || !client) navigation.goBack(); }} style={{ padding: 4 }}>
               <IconClose size={24} color={colors.textPrimary} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>{client ? 'Edit Client' : 'Add New Client'}</Text>
@@ -965,7 +965,7 @@ export default function ClientDetailScreen({ route, navigation }: any) {
           {/* Cancel hint */}
           <TouchableOpacity
             style={styles.cancelHintRow}
-            onPress={() => { setShowAddClientModal(false); if (route.params?.openEdit) navigation.goBack(); }}
+            onPress={() => { setShowAddClientModal(false); if (route.params?.openEdit || route.params?.isNew || !client) navigation.goBack(); }}
           >
             <Text style={styles.cancelHintText}>← Cancel — go back without saving</Text>
           </TouchableOpacity>
@@ -1280,7 +1280,7 @@ export default function ClientDetailScreen({ route, navigation }: any) {
               {/* Bottom cancel button */}
               <TouchableOpacity
                 style={[styles.cancelBtn, { marginTop: 8 }]}
-                onPress={() => { setShowAddClientModal(false); if (route.params?.openEdit) navigation.goBack(); }}
+                onPress={() => { setShowAddClientModal(false); if (route.params?.openEdit || route.params?.isNew || !client) navigation.goBack(); }}
               >
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
