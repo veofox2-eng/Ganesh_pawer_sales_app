@@ -43,7 +43,7 @@ export default function FieldEmployeesDashboard() {
   const [distanceFilter, setDistanceFilter] = useState<'1W' | '1M' | '6M' | '1Y'>('1W');
   const [selectedApplicant, setSelectedApplicant] = useState<any | null>(null);
   const [showAddEmployeePopup, setShowAddEmployeePopup] = useState(false);
-  const [addEmpData, setAddEmpData] = useState({ username: '', email: '', password: '', confirmPassword: '', role: 'Field' });
+  const [addEmpData, setAddEmpData] = useState({ username: '', email: '', password: '', confirmPassword: '', role: 'Field', industry_position: '' });
   const [addEmpLoading, setAddEmpLoading] = useState(false);
   const [addEmpError, setAddEmpError] = useState('');
 
@@ -492,7 +492,7 @@ export default function FieldEmployeesDashboard() {
 
     setAddEmpLoading(true);
     try {
-      const response = await fetch('http://localhost:5002/api/create-employee', {
+      const response = await fetch('https://ganesh-backend-3jit.onrender.com/api/create-employee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -521,7 +521,7 @@ export default function FieldEmployeesDashboard() {
     setDeleteLoading(true);
     setDeleteError('');
     try {
-      const response = await fetch('http://localhost:5002/api/delete-employee', {
+      const response = await fetch('https://ganesh-backend-3jit.onrender.com/api/delete-employee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

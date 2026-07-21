@@ -64,7 +64,7 @@ export default function SuperAdminDashboard() {
     if (!addForm.email || !addForm.password) return alert('Fill all fields');
     setAddLoading(true);
     try {
-      const response = await fetch('http://localhost:5002/api/create-employee', {
+      const response = await fetch('https://ganesh-backend-3jit.onrender.com/api/create-employee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: addForm.email, password: addForm.password, role: addForm.role })
