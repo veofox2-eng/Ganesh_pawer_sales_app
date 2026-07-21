@@ -507,7 +507,7 @@ export default function FieldEmployeesDashboard() {
 
       alert('Employee created successfully!');
       setShowAddEmployeePopup(false);
-      setAddEmpData({ username: '', email: '', password: '', confirmPassword: '', role: 'Field' });
+      setAddEmpData({ username: '', email: '', password: '', confirmPassword: '', role: 'Field', industry_position: '' });
       window.location.reload();
     } catch (err: any) {
       setAddEmpError(err.message || 'Something went wrong');
