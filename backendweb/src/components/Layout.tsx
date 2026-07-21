@@ -1,28 +1,36 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, UserCog, LogOut, Zap, Shield } from 'lucide-react';
+import {
+  LayoutDashboard, Users, UserCog, Shield, Settings,
+  ChevronRight, LogOut, Zap, Search, Activity
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
-import ThemeSwitcher from './ThemeSwitcher';
+import { useTheme } from '../context/ThemeContext';
 
 interface LayoutProps { children: React.ReactNode; }
 
 const navItems = [
-  { to: '/dashboard',                 end: true,  Icon: LayoutDashboard, label: 'Overview'        },
-  { to: '/dashboard/sales-employees', end: false, Icon: Users,           label: 'Sales Employees' },
-  { to: '/dashboard/field-employees', end: false, Icon: UserCog,         label: 'Field Employees' },
+  { to: '/dashboard', end: true, Icon: LayoutDashboard, label: 'Overview' },
+  { to: '/dashboard/sales-employees', end: false, Icon: Users, label: 'Sales Employees' },
+  { to: '/dashboard/field-employees', end: false, Icon: UserCog, label: 'Field Employees' },
+  { to: '/dashboard/admin-employees', end: false, Icon: Shield, label: 'Admin Employees' },
 ];
 
 const sidebarVariants = {
   hidden: { x: -20, opacity: 0 },
-  show:  { x: 0, opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
-};
-const itemV = {
-  hidden: { x: -14, opacity: 0 },
-  show:  { x: 0,   opacity: 1, transition: { duration: 0.4, ease: 'easeOut' as const } },
+  show: { x: 0, opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.05 } },
 };
 
+const itemV = {
+  hidden: { x: -14, opacity: 0 },
+  show: { x: 0, opacity: 1, transition: { duration: 0.4, ease: 'easeOut' as const } },
+};
+
+
 export default function Layout({ children }: LayoutProps) {
+  const { theme } = useTheme();
+
   return (
     <div style={{
       display: 'flex', height: '100vh', overflow: 'hidden',
@@ -53,18 +61,8 @@ export default function Layout({ children }: LayoutProps) {
           filter: 'blur(64px)', transition: 'background 0.5s ease',
         }}
       />
-      <motion.div
-        animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.8, 0.5] }}
-        transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut', delay: 6 }}
-        style={{
-          position: 'fixed', top: '40%', right: '20%', zIndex: 0, pointerEvents: 'none',
-          width: 320, height: 320, borderRadius: '50%',
-          background: 'radial-gradient(circle, var(--orb3) 0%, transparent 70%)',
-          filter: 'blur(48px)', transition: 'background 0.5s ease',
-        }}
-      />
 
-      {/* Grid */}
+      {/* Grid background */}
       <div style={{
         position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
         backgroundImage: 'linear-gradient(rgba(255,255,255,0.013) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.013) 1px, transparent 1px)',
@@ -74,106 +72,110 @@ export default function Layout({ children }: LayoutProps) {
       {/* ── Sidebar ─────────────────────────────────── */}
       <motion.aside
         variants={sidebarVariants} initial="hidden" animate="show"
-        className="glass"
         style={{
           position: 'relative', zIndex: 10,
-          width: 240, flexShrink: 0,
-          margin: '0.875rem', marginRight: 0,
-          borderRadius: 20,
+          width: 288, flexShrink: 0,
+          background: 'var(--surface)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderRight: '1px solid var(--border)',
           display: 'flex', flexDirection: 'column',
-          boxShadow: '0 24px 48px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
           overflow: 'hidden',
           transition: 'background 0.4s ease, border-color 0.4s ease',
+          padding: '2rem',
         }}
       >
-        {/* Brand */}
-        <motion.div variants={itemV} style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '1.5rem 1.25rem 1.25rem',
-          borderBottom: '1px solid var(--border)',
-          background: 'linear-gradient(180deg, rgba(255,255,255,0.03), transparent)'
-        }}>
+        {/* Brand Container - Stitch Design */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '2.5rem' }}>
           <div style={{
-            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-            background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
+            width: 40, height: 40, borderRadius: 8,
+            background: 'var(--text)', color: 'var(--surface)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 18px var(--accent-glow)',
-            transition: 'background 0.4s ease, box-shadow 0.4s ease',
           }}>
-            <Zap size={18} color="#fff" />
+            <Activity size={24} strokeWidth={2.5} />
           </div>
           <div>
-            <p style={{ fontSize: '1rem', fontWeight: 800, color: 'transparent', backgroundImage: 'linear-gradient(to right, var(--text), var(--accent))', WebkitBackgroundClip: 'text', letterSpacing: '-0.02em', transition: 'color 0.4s ease' }}>Fox Sales App</p>
-            <p style={{ fontSize: '0.7rem', color: 'var(--muted)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', transition: 'color 0.4s ease' }}>Admin Portal</p>
+            <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1.2 }}>Fox Sales</h1>
+            <p style={{ margin: '2px 0 0 0', fontSize: '0.65rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Admin Portal</p>
           </div>
-        </motion.div>
+        </div>
 
-        {/* Nav */}
-        <nav style={{ flex: 1, padding: '1rem 0.75rem', display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto' }}>
-          <motion.p variants={itemV} style={{ fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', padding: '0 0.5rem', marginBottom: 6, transition: 'color 0.4s ease' }}>
-            Navigation
-          </motion.p>
+        {/* Nav List */}
+        <nav style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          overflowY: 'auto',
+        }} className="custom-scrollbar">
           {navItems.map(({ to, end, Icon, label }) => (
             <motion.div key={to} variants={itemV}>
               <NavLink
                 to={to} end={end}
                 style={({ isActive }) => ({
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '0.625rem 0.875rem', borderRadius: 12,
-                  color: isActive ? '#fff' : 'var(--muted)',
-                  background: isActive ? 'var(--nav-active)' : 'transparent',
-                  fontWeight: isActive ? 600 : 400,
-                  fontSize: '0.875rem', textDecoration: 'none',
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '0.875rem 1.25rem', borderRadius: 9999,
+                  textDecoration: 'none',
+                  background: isActive ? 'var(--text)' : 'transparent',
+                  color: isActive ? 'var(--surface)' : 'var(--muted)',
                   transition: 'all 0.2s ease',
-                  boxShadow: isActive ? `0 4px 16px var(--accent-glow)` : 'none',
-                  letterSpacing: '-0.01em', cursor: 'none',
+                  cursor: 'pointer',
+                  fontWeight: isActive ? 600 : 500,
                 })}
               >
-                {({ isActive }) => (<><Icon size={16} style={{ opacity: isActive ? 1 : 0.65 }} />{label}</>)}
+                {({ isActive }) => (
+                  <>
+                    <Icon size={20} color={isActive ? 'var(--surface)' : 'var(--muted)'} />
+                    <span style={{ fontSize: '0.875rem', letterSpacing: '0.02em' }}>
+                      {label}
+                    </span>
+
+                    {/* Right Arrow */}
+                    {isActive ? (
+                      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: 8, background: 'rgba(255,255,255,0.1)' }}>
+                        <ChevronRight size={14} color="var(--surface)" />
+                      </div>
+                    ) : (
+                      <ChevronRight size={14} color="var(--border)" style={{ marginLeft: 'auto', opacity: 0.5 }} />
+                    )}
+                  </>
+                )}
               </NavLink>
             </motion.div>
           ))}
         </nav>
 
         {/* Logout */}
-        <motion.div variants={itemV} style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
-          <motion.button
+        <div style={{ padding: '1.5rem 1rem 1.5rem 1rem', borderTop: '1px solid var(--border)', marginTop: 'auto' }}>
+          <button
             onClick={async () => supabase.auth.signOut()}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
             style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-              padding: '0.625rem 0.875rem', borderRadius: 12,
-              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)',
-              color: '#fca5a5', fontSize: '0.875rem', fontWeight: 500,
-              cursor: 'none', fontFamily: 'inherit', transition: 'all 0.2s ease',
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              padding: '0.875rem', borderRadius: 9999,
+              background: 'var(--bg2)',
+              border: '1px solid rgba(186, 26, 26, 0.4)',
+              color: 'rgb(186, 26, 26)', fontSize: '0.875rem', fontWeight: 600,
+              cursor: 'pointer', transition: 'all 0.3s ease',
             }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.15)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(186, 26, 26, 0.05)';
+              e.currentTarget.style.borderColor = 'rgba(186, 26, 26, 0.8)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--bg2)';
+              e.currentTarget.style.borderColor = 'rgba(186, 26, 26, 0.4)';
+            }}
           >
-            <LogOut size={16} /> Logout
-          </motion.button>
-        </motion.div>
+            <LogOut size={20} color="rgb(186, 26, 26)" />
+            <span style={{ color: 'rgb(186, 26, 26)', textShadow: 'rgba(186, 26, 26, 0.6) 0px 0px 8px', letterSpacing: '0.02em' }}>Logout</span>
+          </button>
+        </div>
       </motion.aside>
 
       {/* ── Main ──────────────────────────────────── */}
-      <div style={{ position: 'relative', zIndex: 10, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <motion.header
-          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.4, ease: 'easeOut' }}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 1.75rem', height: 68, flexShrink: 0 }}
-        >
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}>
-            <span style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.02em' }}>
-              BackendAdmin
-            </span>
-            <span style={{ fontFamily: "'Instrument Serif', serif", fontStyle: 'italic', fontSize: '1.45rem', color: 'var(--accent)', fontWeight: 400, transform: 'translateY(1px)' }}>
-              Dashboard
-            </span>
-          </h2>
-          <ThemeSwitcher />
-        </motion.header>
-        <main style={{ flex: 1, overflowY: 'auto', padding: '0 1.75rem 1.75rem' }}>
+      <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <main style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
           {children}
         </main>
       </div>

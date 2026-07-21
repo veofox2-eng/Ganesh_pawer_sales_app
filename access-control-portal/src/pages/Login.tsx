@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
-import { Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Lock, Eye, EyeOff, ArrowRight, ShieldCheck, Sun, Moon } from 'lucide-react';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -9,6 +9,12 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [theme, setTheme] = useState(localStorage.getItem('fox_access_theme') || 'dark');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('fox_access_theme', theme);
+  }, [theme]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,6 +65,13 @@ export default function Login() {
         style={{ position: 'absolute', top: '50%', right: '15%', width: 300, height: 300, borderRadius: '50%', pointerEvents: 'none',
           background: 'radial-gradient(circle, var(--orb3) 0%, transparent 70%)', filter: 'blur(48px)', transition: 'background 0.5s ease' }}
       />
+      
+      <button
+        onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+        style={{ position: 'absolute', top: '2rem', right: '2rem', padding: '10px', borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+      </button>
 
       {/* Grid */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none',

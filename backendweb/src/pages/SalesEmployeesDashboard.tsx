@@ -33,7 +33,7 @@ export default function SalesEmployeesDashboard() {
   const [otherDetailPopup, setOtherDetailPopup] = useState<'tasks' | 'leads' | 'calls' | null>(null);
   const [selectedApplicant, setSelectedApplicant] = useState<any | null>(null);
   const [showAddEmployeePopup, setShowAddEmployeePopup] = useState(false);
-  const [addEmpData, setAddEmpData] = useState({ email: '', password: '', confirmPassword: '', role: 'Sales', industry_position: '' });
+  const [addEmpData, setAddEmpData] = useState({ username: '', email: '', password: '', confirmPassword: '', role: 'Sales', industry_position: '' });
   const [addEmpLoading, setAddEmpLoading] = useState(false);
   const [addEmpError, setAddEmpError] = useState('');
   
@@ -42,6 +42,7 @@ export default function SalesEmployeesDashboard() {
   const [showDeletePassword, setShowDeletePassword] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [hoveredChartSlice, setHoveredChartSlice] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const dashboardScrollPos = useRef<number>(0);
@@ -96,7 +97,7 @@ export default function SalesEmployeesDashboard() {
               .from('interactions')
               .select('id, client_id, type, created_at, content, media_url')
               .in('client_id', chunk)
-              .in('type', ['CALL_RECORDING', 'WHATSAPP_CONTACT', 'NOTE_ADDED', 'ATTACHMENT_ADDED']);
+              .in('type', ['CALL_RECORDING', 'CALL_MADE', 'WHATSAPP_CONTACT', 'NOTE_ADDED', 'ATTACHMENT_ADDED', 'VOICE_INSTRUCTION', 'LOCATION_UPDATE']);
               
             if (interactionData) interactions = [...interactions, ...interactionData];
           }
@@ -143,9 +144,9 @@ export default function SalesEmployeesDashboard() {
           const empClientIds = empClients.map(c => c.id);
           const empInteractions = interactions.filter(i => empClientIds.includes(i.client_id));
           
-          const callCount = empInteractions.filter(i => i.type === 'CALL_RECORDING').length;
+          const callCount = empInteractions.filter(i => i.type === 'CALL_RECORDING' || i.type === 'CALL_MADE').length;
           const whatsappCount = empInteractions.filter(i => i.type === 'WHATSAPP_CONTACT').length;
-          const noteCount = empInteractions.filter(i => i.type === 'NOTE_ADDED').length;
+          const noteCount = empInteractions.filter(i => i.type === 'NOTE_ADDED' || i.type === 'VOICE_INSTRUCTION').length;
           const attachmentCount = empInteractions.filter(i => i.type === 'ATTACHMENT_ADDED').length;
 
           // Attach interaction counts to each client for the table
@@ -153,9 +154,9 @@ export default function SalesEmployeesDashboard() {
             const cInteractions = empInteractions.filter(i => i.client_id === c.id);
             return {
               ...c,
-              callCount: cInteractions.filter(i => i.type === 'CALL_RECORDING').length,
+              callCount: cInteractions.filter(i => i.type === 'CALL_RECORDING' || i.type === 'CALL_MADE').length,
               whatsappCount: cInteractions.filter(i => i.type === 'WHATSAPP_CONTACT').length,
-              noteCount: cInteractions.filter(i => i.type === 'NOTE_ADDED').length,
+              noteCount: cInteractions.filter(i => i.type === 'NOTE_ADDED' || i.type === 'VOICE_INSTRUCTION').length,
               attachmentCount: cInteractions.filter(i => i.type === 'ATTACHMENT_ADDED').length,
               cInteractions
             };
@@ -192,7 +193,7 @@ export default function SalesEmployeesDashboard() {
           };
         });
 
-        setEmployees(empData.sort((a, b) => (a.username || a.feature_flags?.email || 'Pending Name').localeCompare(b.username || b.feature_flags?.email || 'Pending Name')));
+        setEmployees(empData.sort((a: any, b: any) => (a.username || a.feature_flags?.email || 'Pending Name').localeCompare(b.username || b.feature_flags?.email || 'Pending Name')));
       } catch (err) {
         console.error("Error fetching sales data", err);
       } finally {
@@ -235,21 +236,49 @@ export default function SalesEmployeesDashboard() {
 
   if (loading) {
     return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-        <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid var(--border)', borderTopColor: 'var(--accent)', animation: 'spin 1s linear infinite' }} />
-        <div style={{ color: 'var(--muted)', fontWeight: 500 }}>Loading employee data...</div>
-      </div>
+      <motion.div 
+        initial={{ opacity: 0 }} 
+        animate={{ opacity: 1 }}
+        style={{ height: '100%', minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 24 }}
+      >
+        <div style={{ position: 'relative', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* Glowing background orb */}
+          <motion.div
+            animate={{ scale: [1, 1.4, 1], opacity: [0.2, 0.6, 0.2] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', background: 'var(--accent)', filter: 'blur(20px)' }}
+          />
+          {/* Outer rotating ring */}
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+            style={{ position: 'absolute', width: 56, height: 56, borderRadius: '50%', border: '3px solid transparent', borderTopColor: 'var(--accent)', borderRightColor: 'var(--accent)' }}
+          />
+          {/* Inner counter-rotating ring */}
+          <motion.div
+            animate={{ rotate: -360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            style={{ position: 'absolute', width: 36, height: 36, borderRadius: '50%', border: '3px solid transparent', borderBottomColor: 'var(--text)', borderLeftColor: 'var(--text)' }}
+          />
+        </div>
+        <motion.div 
+          animate={{ opacity: [0.4, 1, 0.4] }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+          style={{ color: 'var(--text)', fontWeight: 600, fontSize: '1.05rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}
+        >
+          Loading Data...
+        </motion.div>
+      </motion.div>
     );
   }
 
   const handleDownloadPDF = async () => {
     if (!selectedEmp) return;
     
-    // Performance calculation (Option A: Conversion Focus)
+    // Performance calculation (Net Score: Converted - Lost)
     const activeClients = selectedEmp.stats.converted + selectedEmp.stats.followUp + selectedEmp.stats.lost;
-    const performancePct = activeClients > 0 
-      ? Math.round((selectedEmp.stats.converted / activeClients) * 100) 
-      : 0;
+    const rawScore = activeClients > 0 ? ((selectedEmp.stats.converted - selectedEmp.stats.lost) / activeClients) * 100 : 0;
+    const performancePct = rawScore < 0 && rawScore > -1 ? -1 : Math.round(rawScore);
 
     const doc = new jsPDF('p', 'pt', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -401,10 +430,11 @@ export default function SalesEmployeesDashboard() {
     
     setAddEmpLoading(true);
     try {
-      const response = await fetch('https://ganesh-backend-3j1t.onrender.com/api/create-employee', {
+      const response = await fetch('http://localhost:5002/api/create-employee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          username: addEmpData.username || undefined,
           email: addEmpData.email,
           password: addEmpData.password,
           role: addEmpData.role,
@@ -416,7 +446,7 @@ export default function SalesEmployeesDashboard() {
       
       alert('Employee created successfully!');
       setShowAddEmployeePopup(false);
-      setAddEmpData({ email: '', password: '', confirmPassword: '', role: 'Sales', industry_position: '' });
+      setAddEmpData({ username: '', email: '', password: '', confirmPassword: '', role: 'Sales', industry_position: '' });
       window.location.reload();
     } catch (err: any) {
       setAddEmpError(err.message || 'Something went wrong');
@@ -430,7 +460,7 @@ export default function SalesEmployeesDashboard() {
     setDeleteLoading(true);
     setDeleteError('');
     try {
-      const response = await fetch('https://ganesh-backend-3j1t.onrender.com/api/delete-employee', {
+      const response = await fetch('http://localhost:5002/api/delete-employee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -480,14 +510,20 @@ export default function SalesEmployeesDashboard() {
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem' }}>
           {filteredEmployees.map(emp => (
-            <div 
+            <motion.div 
               key={emp.id}
               onClick={() => { setSelectedEmpId(emp.id); setSelectedClientId(null); setFilterStatus('ALL'); }}
-              className="interactive-row"
+              whileHover={{ 
+                boxShadow: '0 0 15px rgba(99,102,241,0.4)', 
+                borderColor: 'var(--accent)',
+                scale: 1.02
+              }}
               style={{
                 padding: '1rem', borderRadius: 12, marginBottom: '0.5rem', cursor: 'pointer',
-                background: selectedEmpId === emp.id ? 'var(--accent)' : 'transparent',
-                color: selectedEmpId === emp.id ? '#fff' : 'var(--text)'
+                background: selectedEmpId === emp.id ? 'var(--accent)' : 'var(--bg)',
+                color: selectedEmpId === emp.id ? '#fff' : 'var(--text)',
+                border: selectedEmpId === emp.id ? '1px solid var(--accent)' : '1px solid transparent',
+                transition: 'all 0.2s ease'
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -498,7 +534,7 @@ export default function SalesEmployeesDashboard() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
           {filteredEmployees.length === 0 && <p style={{ padding: '1rem', color: 'var(--muted)', textAlign: 'center', fontSize: '0.85rem' }}>No matching employees.</p>}
         </div>
@@ -602,9 +638,9 @@ export default function SalesEmployeesDashboard() {
                   </h3>
                   {(() => {
                     const timelineInteractions = selectedClient.cInteractions.filter((i: any) => {
-                      if (filterStatus === 'CALLS') return i.type === 'CALL_RECORDING';
+                      if (filterStatus === 'CALLS') return i.type === 'CALL_RECORDING' || i.type === 'CALL_MADE';
                       if (filterStatus === 'WHATSAPP') return i.type === 'WHATSAPP_CONTACT';
-                      if (filterStatus === 'NOTES') return i.type === 'NOTE_ADDED';
+                      if (filterStatus === 'NOTES') return i.type === 'NOTE_ADDED' || i.type === 'VOICE_INSTRUCTION';
                       if (filterStatus === 'ATTACHMENTS') return i.type === 'ATTACHMENT_ADDED';
                       return true; // ALL or other statuses show everything
                     }).sort((a:any, b:any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -627,13 +663,13 @@ export default function SalesEmployeesDashboard() {
                           <div style={{ 
                             width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                             background: i.type === 'WHATSAPP_CONTACT' ? 'linear-gradient(135deg, #25D366, #128C7E)' : 
-                                        i.type === 'NOTE_ADDED' ? 'linear-gradient(135deg, #eab308, #ca8a04)' :
+                                        (i.type === 'NOTE_ADDED' || i.type === 'VOICE_INSTRUCTION') ? 'linear-gradient(135deg, #eab308, #ca8a04)' :
                                         i.type === 'ATTACHMENT_ADDED' ? 'linear-gradient(135deg, #3b82f6, #2563eb)' :
                                         'linear-gradient(135deg, var(--accent), #818cf8)',
                             color: '#fff', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', border: '4px solid var(--surface)'
                           }}>
                             {i.type === 'WHATSAPP_CONTACT' ? <MessageCircle size={14} /> : 
-                             i.type === 'NOTE_ADDED' ? <FileText size={14} /> :
+                             (i.type === 'NOTE_ADDED' || i.type === 'VOICE_INSTRUCTION') ? <FileText size={14} /> :
                              i.type === 'ATTACHMENT_ADDED' ? <Paperclip size={14} /> :
                              <PhoneCall size={14} />}
                           </div>
@@ -642,7 +678,9 @@ export default function SalesEmployeesDashboard() {
                               <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>
                                 {i.type === 'WHATSAPP_CONTACT' ? 'WhatsApp Message' : 
                                  i.type === 'NOTE_ADDED' ? 'Note Added' :
+                                 i.type === 'VOICE_INSTRUCTION' ? 'Voice Instruction' :
                                  i.type === 'ATTACHMENT_ADDED' ? 'Attachment Uploaded' :
+                                 i.type === 'CALL_MADE' ? 'Call Made' :
                                  'Call Logged'}
                               </span>
                               <span style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 500 }}>
@@ -653,11 +691,13 @@ export default function SalesEmployeesDashboard() {
                               {i.content || (
                                 i.type === 'WHATSAPP_CONTACT' ? 'WhatsApp interaction logged automatically.' : 
                                 i.type === 'NOTE_ADDED' ? 'Empty note.' :
+                                i.type === 'VOICE_INSTRUCTION' ? 'Voice note attached.' :
                                 i.type === 'ATTACHMENT_ADDED' ? 'File attached.' :
+                                i.type === 'CALL_MADE' ? 'Manual call logged.' :
                                 'Call recording uploaded automatically.'
                               )}
                             </p>
-                            {i.type === 'CALL_RECORDING' && i.media_url && i.media_url !== 'DELETED' && (
+                            {(i.type === 'CALL_RECORDING' || i.type === 'VOICE_INSTRUCTION') && i.media_url && i.media_url !== 'DELETED' && (
                               <div style={{ marginTop: '1rem' }}>
                                 <CustomAudioPlayer src={i.media_url} />
                               </div>
@@ -701,7 +741,7 @@ export default function SalesEmployeesDashboard() {
                         </svg>
                         <div style={{ width: '100%', height: 240, position: 'relative' }}>
                           <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
+                            <PieChart style={{ outline: 'none' }}>
                               <Pie
                                 data={[
                                   { name: 'Follow-up', value: selectedEmp.stats.followUp },
@@ -711,30 +751,34 @@ export default function SalesEmployeesDashboard() {
                                 ].filter(d => d.value > 0)}
                                 cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={5} dataKey="value" stroke="none"
                                 isAnimationActive={false}
+                                style={{ outline: 'none' }}
                               >
                                 {[
                                   { name: 'Follow-up', color: '#f59e0b', value: selectedEmp.stats.followUp },
                                   { name: 'Converted', color: '#10b981', value: selectedEmp.stats.converted },
                                   { name: 'Lost', color: '#ef4444', value: selectedEmp.stats.lost },
                                   { name: 'Deleted', color: '#64748b', value: selectedEmp.stats.deleted }
-                                ].filter(d => d.value > 0).map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={entry.color} style={{ filter: 'drop-shadow(0px 4px 6px rgba(0,0,0,0.1))' }} />
-                                ))}
+                                ].filter(d => d.value > 0).map((entry, index) => {
+                                  const isDimmed = hoveredChartSlice !== null && hoveredChartSlice !== entry.name;
+                                  return (
+                                    <Cell key={`cell-${index}`} fill={entry.color} style={{ filter: 'drop-shadow(0px 4px 6px rgba(0,0,0,0.1))', outline: 'none', opacity: isDimmed ? 0.3 : 1, transition: 'opacity 0.2s ease' }} />
+                                  );
+                                })}
                               </Pie>
-                              <RechartsTooltip contentStyle={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', border: '1px solid var(--border)', borderRadius: 12, color: '#1f2937', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} itemStyle={{ color: '#1f2937', fontWeight: 600 }} />
+                              <RechartsTooltip contentStyle={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', border: '1px solid var(--border)', borderRadius: 12, color: '#1f2937', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', outline: 'none' }} itemStyle={{ color: '#1f2937', fontWeight: 600 }} />
                             </PieChart>
                           </ResponsiveContainer>
                           {/* Center Text */}
-                          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
+                          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none', zIndex: 0 }}>
                             <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>{selectedEmp.stats.total}</div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 4, fontWeight: 600 }}>Clients</div>
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '1.5rem' }}>
-                          <LegendItem color={RAW_COLORS[0]} label={`Follow-up (${selectedEmp.stats.followUp})`} />
-                          <LegendItem color={RAW_COLORS[1]} label={`Converted (${selectedEmp.stats.converted})`} />
-                          <LegendItem color={RAW_COLORS[2]} label={`Lost (${selectedEmp.stats.lost})`} />
-                          <LegendItem color={RAW_COLORS[3]} label={`Deleted (${selectedEmp.stats.deleted})`} />
+                          <LegendItem color={RAW_COLORS[0]} label={`Follow-up (${selectedEmp.stats.followUp})`} onMouseEnter={() => setHoveredChartSlice('Follow-up')} onMouseLeave={() => setHoveredChartSlice(null)} />
+                          <LegendItem color={RAW_COLORS[1]} label={`Converted (${selectedEmp.stats.converted})`} onMouseEnter={() => setHoveredChartSlice('Converted')} onMouseLeave={() => setHoveredChartSlice(null)} />
+                          <LegendItem color={RAW_COLORS[2]} label={`Lost (${selectedEmp.stats.lost})`} onMouseEnter={() => setHoveredChartSlice('Lost')} onMouseLeave={() => setHoveredChartSlice(null)} />
+                          <LegendItem color={RAW_COLORS[3]} label={`Deleted (${selectedEmp.stats.deleted})`} onMouseEnter={() => setHoveredChartSlice('Deleted')} onMouseLeave={() => setHoveredChartSlice(null)} />
                         </div>
                       </div>
                     )}
@@ -752,20 +796,26 @@ export default function SalesEmployeesDashboard() {
                   <div style={{ flex: '1 1 320px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     
                     {/* Status Stats */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(115px, 1fr))', gap: '1rem' }}>
-                      <StatCard title="All Clients" value={selectedEmp.stats.total.toString()} icon={<Users size={16} />} highlight={filterStatus === 'ALL'} isActive={filterStatus === 'ALL'} onClick={() => setFilterStatus('ALL')} />
-                      <StatCard title="Follow-up" value={selectedEmp.stats.followUp.toString()} icon={<PhoneCall size={16} />} highlight={filterStatus === 'Follow-up'} isActive={filterStatus === 'Follow-up'} onClick={() => setFilterStatus('Follow-up')} />
-                      <StatCard title="Converted" value={selectedEmp.stats.converted.toString()} icon={<CheckCircle size={16} />} highlight={filterStatus === 'Converted'} isActive={filterStatus === 'Converted'} onClick={() => setFilterStatus('Converted')} />
-                      <StatCard title="Lost" value={selectedEmp.stats.lost.toString()} icon={<XCircle size={16} />} highlight={filterStatus === 'Lost'} isActive={filterStatus === 'Lost'} onClick={() => setFilterStatus('Lost')} />
-                      <StatCard title="Deleted" value={selectedEmp.stats.deleted.toString()} icon={<Trash2 size={16} />} highlight={filterStatus === 'Deleted'} isActive={filterStatus === 'Deleted'} onClick={() => setFilterStatus('Deleted')} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Client Details</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(115px, 1fr))', gap: '1rem' }}>
+                        <StatCard title="All Clients" value={selectedEmp.stats.total.toString()} icon={<Users size={16} />} highlight={filterStatus === 'ALL'} isActive={filterStatus === 'ALL'} onClick={() => setFilterStatus('ALL')} />
+                        <StatCard title="Follow-up" value={selectedEmp.stats.followUp.toString()} icon={<PhoneCall size={16} />} highlight={filterStatus === 'Follow-up'} isActive={filterStatus === 'Follow-up'} onClick={() => setFilterStatus('Follow-up')} />
+                        <StatCard title="Converted" value={selectedEmp.stats.converted.toString()} icon={<CheckCircle size={16} />} highlight={filterStatus === 'Converted'} isActive={filterStatus === 'Converted'} onClick={() => setFilterStatus('Converted')} />
+                        <StatCard title="Lost" value={selectedEmp.stats.lost.toString()} icon={<XCircle size={16} />} highlight={filterStatus === 'Lost'} isActive={filterStatus === 'Lost'} onClick={() => setFilterStatus('Lost')} />
+                        <StatCard title="Deleted" value={selectedEmp.stats.deleted.toString()} icon={<Trash2 size={16} />} highlight={filterStatus === 'Deleted'} isActive={filterStatus === 'Deleted'} onClick={() => setFilterStatus('Deleted')} />
+                      </div>
                     </div>
 
                     {/* Interaction Stats */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(115px, 1fr))', gap: '1rem' }}>
-                      <StatCard title="Total Calls" value={selectedEmp.stats.callCount.toString()} icon={<PhoneCall size={16} />} highlight={filterStatus === 'CALLS'} isActive={filterStatus === 'CALLS'} onClick={() => setFilterStatus('CALLS')} />
-                      <StatCard title="WhatsApp" value={selectedEmp.stats.whatsappCount.toString()} icon={<MessageCircle size={16} />} highlight={filterStatus === 'WHATSAPP'} isActive={filterStatus === 'WHATSAPP'} onClick={() => setFilterStatus('WHATSAPP')} />
-                      <StatCard title="Notes Added" value={selectedEmp.stats.noteCount.toString()} icon={<FileText size={16} />} highlight={filterStatus === 'NOTES'} isActive={filterStatus === 'NOTES'} onClick={() => setFilterStatus('NOTES')} />
-                      <StatCard title="Attachments" value={selectedEmp.stats.attachmentCount.toString()} icon={<Paperclip size={16} />} highlight={filterStatus === 'ATTACHMENTS'} isActive={filterStatus === 'ATTACHMENTS'} onClick={() => setFilterStatus('ATTACHMENTS')} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <h4 style={{ margin: '0.5rem 0 0.25rem 0', fontSize: '0.875rem', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Conversation Details</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(115px, 1fr))', gap: '1rem' }}>
+                        <StatCard title="Total Calls" value={selectedEmp.stats.callCount.toString()} icon={<PhoneCall size={16} />} highlight={filterStatus === 'CALLS'} isActive={filterStatus === 'CALLS'} onClick={() => setFilterStatus('CALLS')} />
+                        <StatCard title="WhatsApp" value={selectedEmp.stats.whatsappCount.toString()} icon={<MessageCircle size={16} />} highlight={filterStatus === 'WHATSAPP'} isActive={filterStatus === 'WHATSAPP'} onClick={() => setFilterStatus('WHATSAPP')} />
+                        <StatCard title="Notes Added" value={selectedEmp.stats.noteCount.toString()} icon={<FileText size={16} />} highlight={filterStatus === 'NOTES'} isActive={filterStatus === 'NOTES'} onClick={() => setFilterStatus('NOTES')} />
+                        <StatCard title="Attachments" value={selectedEmp.stats.attachmentCount.toString()} icon={<Paperclip size={16} />} highlight={filterStatus === 'ATTACHMENTS'} isActive={filterStatus === 'ATTACHMENTS'} onClick={() => setFilterStatus('ATTACHMENTS')} />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -889,6 +939,14 @@ export default function SalesEmployeesDashboard() {
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text)', fontSize: '0.85rem', fontWeight: 600 }}>Employee Name</label>
+                <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12, padding: '0 1rem' }}>
+                  <User size={16} color="var(--muted)" />
+                  <input type="text" placeholder="John Doe" value={addEmpData.username} onChange={e => setAddEmpData({ ...addEmpData, username: e.target.value })} style={{ flex: 1, border: 'none', background: 'transparent', padding: '0.75rem', color: 'var(--text)', outline: 'none' }} />
+                </div>
+              </div>
+
+              <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text)', fontSize: '0.85rem', fontWeight: 600 }}>Email Address</label>
                 <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12, padding: '0 1rem' }}>
                   <User size={16} color="var(--muted)" />
@@ -983,7 +1041,9 @@ export default function SalesEmployeesDashboard() {
               <div style={{ fontSize: '3.5rem', fontWeight: 800, color: 'var(--accent)', lineHeight: 1 }}>
                 {(() => {
                    const active = selectedEmp.stats.converted + selectedEmp.stats.followUp + selectedEmp.stats.lost;
-                   return active > 0 ? Math.round((selectedEmp.stats.converted / active) * 100) : 0;
+                   const rawScore = active > 0 ? ((selectedEmp.stats.converted - selectedEmp.stats.lost) / active) * 100 : 0;
+                   const score = rawScore < 0 && rawScore > -1 ? -1 : Math.round(rawScore);
+                   return <span style={{ color: score < 0 ? '#ef4444' : 'var(--accent)' }}>{score}</span>;
                 })()}%
               </div>
             </div>
@@ -1265,77 +1325,50 @@ export default function SalesEmployeesDashboard() {
   );
 }
 
-function LegendItem({ color, label }: { color: string, label: string }) {
+function LegendItem({ color, label, onMouseEnter, onMouseLeave }: { color: string, label: string, onMouseEnter?: () => void, onMouseLeave?: () => void }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: 'var(--text)' }}>
-      <div style={{ width: 10, height: 10, borderRadius: '50%', background: color }} />
+    <div 
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1rem', fontWeight: 500, color: 'var(--text)', cursor: 'default', transition: 'opacity 0.2s ease' }}
+    >
+      <div style={{ width: 12, height: 12, borderRadius: '50%', background: color }} />
       {label}
     </div>
   );
 }
 
 function StatCard({ title, value, icon, highlight = false, onClick, isActive = false }: any) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const rotateX = useTransform(y, [-0.5, 0.5], [8, -8]);
-  const rotateY = useTransform(x, [-0.5, 0.5], [-8, 8]);
-  const glowX   = useTransform(x, [-0.5, 0.5], [0, 100]);
-  const glowY   = useTransform(y, [-0.5, 0.5], [0, 100]);
-
-  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    x.set((e.clientX - rect.left) / rect.width  - 0.5);
-    y.set((e.clientY - rect.top)  / rect.height - 0.5);
-  };
-  const onLeave = () => { x.set(0); y.set(0); };
-
-  const baseColor = highlight ? '#ffffff' : '#6366f1';
-
   return (
     <motion.div 
-      ref={cardRef}
-      onMouseMove={onMove}
-      onMouseLeave={onLeave}
       onClick={onClick}
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.3 }}
+      whileHover={{ y: -2, boxShadow: highlight ? '0 10px 20px rgba(59, 130, 246, 0.2)' : '0 8px 16px rgba(0,0,0,0.05)' }}
       style={{ 
         cursor: onClick ? 'pointer' : 'default',
-        rotateX, rotateY,
-        transformStyle: 'preserve-3d',
-        transformPerspective: 1000,
         position: 'relative', overflow: 'hidden',
-        background: highlight ? 'linear-gradient(135deg, var(--accent), #818cf8)' : 'linear-gradient(145deg, var(--surface), rgba(255,255,255,0.02))', 
-        border: isActive ? `1px solid ${baseColor}aa` : '1px solid var(--border)', 
-        borderRadius: 16, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem',
+        background: highlight ? 'linear-gradient(135deg, var(--accent), var(--accent2))' : 'var(--surface)', 
+        border: isActive ? `1px solid var(--accent)` : '1px solid var(--border)', 
+        borderRadius: 12, 
+        padding: '0.85rem 1rem', 
+        display: 'flex', flexDirection: 'column', gap: '0.4rem',
         color: highlight ? '#fff' : 'var(--text)',
-        boxShadow: isActive ? `0 10px 25px ${baseColor}44, inset 0 1px 0 rgba(255,255,255,0.1)` : highlight ? '0 10px 25px rgba(99,102,241,0.3)' : '0 4px 15px rgba(0,0,0,0.02)',
-        backdropFilter: 'blur(10px)',
+        boxShadow: isActive ? '0 4px 12px rgba(59, 130, 246, 0.15)' : '0 2px 6px rgba(0,0,0,0.02)',
+        backdropFilter: 'blur(12px)',
         flex: 1,
-        transition: 'border-color 0.4s ease, box-shadow 0.4s ease',
+        transition: 'all 0.3s ease',
       }}
-      whileHover={{ boxShadow: highlight ? `0 24px 60px rgba(99,102,241,0.5), inset 0 1px 0 rgba(255,255,255,0.2)` : `0 24px 60px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2), 0 0 0 1px ${baseColor}55` }}
     >
-      <motion.div
-        style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 18,
-          background: useTransform(
-            [glowX, glowY],
-            ([gx, gy]) => `radial-gradient(circle at ${gx}% ${gy}%, ${baseColor}22 0%, transparent 60%)`
-          ),
-        }}
-      />
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, opacity: highlight ? 0.9 : 0.6, fontSize: '0.65rem', fontWeight: 700 }}>
-          <span style={{ transform: 'scale(0.85)', flexShrink: 0, marginTop: 1 }}>{icon}</span> 
-          <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1.3, wordBreak: 'break-word' }}>{title}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: highlight ? 1 : 0.7, fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: 6, background: highlight ? 'rgba(255,255,255,0.2)' : 'var(--bg2)', color: highlight ? '#fff' : 'var(--accent)' }}>
+          <span style={{ transform: 'scale(0.75)' }}>{icon}</span>
         </div>
-        <div style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.02em', marginTop: '0.35rem' }}>
-          {value}
-        </div>
+        <span style={{ lineHeight: 1.2 }}>{title}</span>
+      </div>
+      <div style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.02em', marginTop: '0.15rem' }}>
+        {value}
       </div>
     </motion.div>
   );
@@ -1432,14 +1465,35 @@ function CustomAudioPlayer({ src }: { src: string }) {
             display: 'flex', 
             alignItems: 'center', 
             cursor: 'pointer',
-            position: 'relative'
+            position: 'relative',
+            touchAction: 'none' // Prevent scrolling while dragging on touch devices
           }}
-          onClick={(e) => {
+          onPointerDown={(e) => {
             if (!audioRef.current || duration === 0) return;
+            e.currentTarget.setPointerCapture(e.pointerId);
             const rect = e.currentTarget.getBoundingClientRect();
-            const val = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-            audioRef.current.currentTime = val * duration;
-            setProgress(val * duration);
+            
+            const updateProgress = (clientX: number) => {
+              const val = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+              if (audioRef.current) {
+                audioRef.current.currentTime = val * duration;
+                setProgress(val * duration);
+              }
+            };
+            updateProgress(e.clientX);
+            
+            const handlePointerMove = (moveEvent: React.PointerEvent) => {
+              updateProgress(moveEvent.clientX);
+            };
+            
+            const handlePointerUp = (upEvent: React.PointerEvent) => {
+              upEvent.currentTarget.releasePointerCapture(upEvent.pointerId);
+              e.currentTarget.removeEventListener('pointermove', handlePointerMove as any);
+              e.currentTarget.removeEventListener('pointerup', handlePointerUp as any);
+            };
+            
+            e.currentTarget.addEventListener('pointermove', handlePointerMove as any);
+            e.currentTarget.addEventListener('pointerup', handlePointerUp as any);
           }}
         >
           {/* Track background */}

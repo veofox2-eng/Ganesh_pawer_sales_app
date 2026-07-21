@@ -75,6 +75,8 @@ function isExceeded(dateStr?: string, status?: string) {
 const ClientItem = React.memo(({ 
   item: c, 
   onPress, 
+  onLongPress,
+  isSelected,
   onStartCall, 
   onWhatsApp, 
   onDelete, 
@@ -132,14 +134,19 @@ const ClientItem = React.memo(({
       activeOffsetX={[-20, 20]} // Increased threshold to prevent accidental swipes while scrolling
     >
       <TouchableOpacity
-        style={[styles.card, hasFollowupToday && styles.cardHighlight, { marginHorizontal: spacing.lg }]}
+        style={[styles.card, hasFollowupToday && styles.cardHighlight, isSelected && { borderColor: colors.accent, borderWidth: 2, backgroundColor: colors.accent + '11' }, { marginHorizontal: spacing.lg }]}
         onPress={() => onPress(c)}
+        onLongPress={() => onLongPress && onLongPress(c)}
         activeOpacity={0.75}
       >
         {hasFollowupToday && <View style={styles.todayAccent} />}
         <View style={styles.cardLeft}>
           <View style={[styles.avatar, hasFollowupToday && styles.avatarHighlight]}>
-            <Text style={styles.avatarText}>{getInitials(c.name)}</Text>
+            {isSelected ? (
+              <IconCheck size={20} color="#fff" />
+            ) : (
+              <Text style={styles.avatarText}>{getInitials(c.name)}</Text>
+            )}
           </View>
         </View>
         <View style={styles.cardMid}>
@@ -254,10 +261,87 @@ export default function CallSheetScreen({ navigation, route }: any) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data } = await supabase.from('clients').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
-    if (data) setClients(data);
+    const { data } = await supabase.from('clients').select('*, profiles!shared_by(username, feature_flags)').eq('user_id', user.id).order('created_at', { ascending: false });
+    if (data) {
+      const formatted = data.map((c: any) => ({
+        ...c,
+        shared_by_name: c.profiles ? (c.profiles.username || c.profiles.feature_flags?.email || 'Unknown') : undefined
+      }));
+      setClients(formatted);
+    }
     setLoading(false);
   }
+
+  // --- Sharing & Selection State ---
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [employees, setEmployees] = useState<{ id: string; name: string; role: string }[]>([]);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+
+  async function fetchEmployees() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from('profiles').select('id, username, feature_flags, role').neq('id', user.id);
+    if (data) {
+      const formatted = data.map((d: any) => ({
+        id: d.id,
+        name: d.username || d.feature_flags?.email || 'Unknown',
+        role: d.role
+      }));
+      setEmployees(formatted);
+    }
+  }
+
+  async function handleShareClients() {
+    if (!selectedEmployeeId || selectedClientIds.length === 0) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    
+    // Share by calling secure database function to bypass restrictive RLS policies
+    const { error } = await supabase.rpc('share_clients', {
+      client_ids: selectedClientIds,
+      new_owner_id: selectedEmployeeId,
+      sharing_user_id: user.id
+    });
+      
+    if (error) {
+      Alert.alert('Error', 'Failed to share clients: ' + error.message);
+    } else {
+      Alert.alert('Success', `Shared ${selectedClientIds.length} clients successfully!`);
+      setIsSelectionMode(false);
+      setSelectedClientIds([]);
+      setShowShareModal(false);
+      setSelectedEmployeeId(null);
+      fetchClients();
+    }
+  }
+
+  const toggleSelection = (clientId: string) => {
+    if (selectedClientIds.includes(clientId)) {
+      const newSelected = selectedClientIds.filter(id => id !== clientId);
+      setSelectedClientIds(newSelected);
+      if (newSelected.length === 0) setIsSelectionMode(false);
+    } else {
+      setSelectedClientIds([...selectedClientIds, clientId]);
+    }
+  };
+
+  const handleLongPressClient = (client: Client) => {
+    if (!isSelectionMode) {
+      setIsSelectionMode(true);
+      setSelectedClientIds([client.id]);
+    }
+  };
+
+  const handlePressClient = (client: Client) => {
+    if (isSelectionMode) {
+      toggleSelection(client.id);
+    } else {
+      navigation.navigate('ClientDetail', { client });
+    }
+  };
+  // ---------------------------------
 
   const handleDownloadSample = async () => {
     try {
@@ -517,15 +601,17 @@ export default function CallSheetScreen({ navigation, route }: any) {
   const renderItem = React.useCallback(({ item }: { item: Client }) => (
     <ClientItem 
       item={item}
-      onPress={(c: Client) => navigation.navigate('ClientDetail', { client: c })}
+      onPress={handlePressClient}
+      onLongPress={handleLongPressClient}
+      isSelected={selectedClientIds.includes(item.id)}
       onStartCall={startCall}
-                onWhatsApp={async (phone: string) => {
-                  try {
-                    await Linking.openURL(`https://wa.me/${(phone || '').replace(/\D/g, '')}`);
-                  } catch (err) {
-                    Alert.alert('Error', 'Could not open WhatsApp.');
-                  }
-                }}
+      onWhatsApp={async (phone: string) => {
+        try {
+          await Linking.openURL(`https://wa.me/${(phone || '').replace(/\D/g, '')}`);
+        } catch (err) {
+          Alert.alert('Error', 'Could not open WhatsApp.');
+        }
+      }}
       onDelete={handleDeleteClient}
       onRestore={handleRestoreClient}
       onPermDelete={handlePermanentDeleteClient}
@@ -538,126 +624,163 @@ export default function CallSheetScreen({ navigation, route }: any) {
       theme={colors}
       styles={styles}
     />
-  ), [colors, styles, isAdmin, navigation, startCall]);
+  ), [colors, styles, isAdmin, navigation, startCall, isSelectionMode, selectedClientIds]);
 
-  const renderHeader = () => (
+  const renderHeader = () => {
+    return (
     <View style={{ paddingTop: spacing.md }}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={{ flex: 1, paddingRight: 8 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-            <Text style={{ fontSize: 13, color: colors.textSecondary, fontWeight: '600' }}>{profile?.username || 'Employee'}</Text>
-            <View style={{ backgroundColor: colors.accentLight, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-              <Text style={{ fontSize: 10, color: colors.accent, fontWeight: '700', textTransform: 'uppercase' }}>{profile?.feature_flags?.industry_position || profile?.role}</Text>
-            </View>
+      {isSelectionMode ? (
+        <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, backgroundColor: colors.bg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <TouchableOpacity 
+              onPress={() => { setIsSelectionMode(false); setSelectedClientIds([]); }}
+              style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.textPrimary, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Text style={{ color: colors.bg, fontWeight: '900', fontSize: 16, marginTop: -2 }}>×</Text>
+            </TouchableOpacity>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, fontStyle: 'italic' }}>{selectedClientIds.length} Selected</Text>
           </View>
-          <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Client Call Sheet</Text>
-          <Text style={styles.headerSub} numberOfLines={1}>{activeCount} clients{todayCount > 0 ? ` · ${todayCount} follow-up today` : ''}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+            <TouchableOpacity onPress={() => {
+              if (selectedClientIds.length === clients.length) {
+                setSelectedClientIds([]);
+              } else {
+                setSelectedClientIds(clients.map(c => c.id));
+              }
+            }}>
+              <Text style={{ color: colors.accent, fontWeight: '700' }}>{selectedClientIds.length === clients.length ? 'Deselect All' : 'Select All'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => {
+                fetchEmployees();
+                setShowShareModal(true);
+              }}
+              style={{ backgroundColor: colors.accent, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 }}
+            >
+              <Text style={{ color: '#fff', fontWeight: '700' }}>Share</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false} style={{ flexShrink: 1, maxWidth: '60%' }} contentContainerStyle={styles.headerActions}>
-          <TouchableOpacity onPress={toggleTheme} style={styles.themeBtn}>
-            {isDark
-              ? <IconSun size={20} color={colors.warning} />
-              : <IconMoon size={20} color={colors.accent} />
-            }
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.themeBtn, { backgroundColor: colors.accentLight, borderColor: colors.accent }]}
-            onPress={() => navigation.navigate('Dialer')}
-          >
-            <IconCall size={18} color={colors.accent} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => navigation.navigate('ClientDetail', { client: null, isNew: true })}
-          >
-            <IconAdd size={20} color="#fff" />
-            <Text style={styles.addBtnText}>Add</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleSignOut} style={styles.signOutBtn}>
-            <IconLogout size={20} color={colors.danger} />
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
+      ) : (
+        <>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <Text style={{ fontSize: 13, color: colors.textSecondary, fontWeight: '600' }}>{profile?.username || 'Employee'}</Text>
+                <View style={{ backgroundColor: colors.accentLight, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                  <Text style={{ fontSize: 10, color: colors.accent, fontWeight: '700', textTransform: 'uppercase' }}>{profile?.feature_flags?.industry_position || profile?.role}</Text>
+                </View>
+              </View>
+              <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Client Call Sheet</Text>
+              <Text style={styles.headerSub} numberOfLines={1}>{activeCount} clients{todayCount > 0 ? ` · ${todayCount} follow-up today` : ''}</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false} style={{ flexShrink: 1, maxWidth: '60%' }} contentContainerStyle={styles.headerActions}>
+              <TouchableOpacity onPress={toggleTheme} style={styles.themeBtn}>
+                {isDark
+                  ? <IconSun size={20} color={colors.warning} />
+                  : <IconMoon size={20} color={colors.accent} />
+                }
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.themeBtn, { backgroundColor: colors.accentLight, borderColor: colors.accent }]}
+                onPress={() => navigation.navigate('Dialer')}
+              >
+                <IconCall size={18} color={colors.accent} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.addBtn}
+                onPress={() => navigation.navigate('ClientDetail', { client: null, isNew: true })}
+              >
+                <IconAdd size={20} color="#fff" />
+                <Text style={styles.addBtnText}>Add</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSignOut} style={styles.signOutBtn}>
+                <IconLogout size={20} color={colors.danger} />
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
 
-      {/* Excel Bulk Upload Actions */}
-      <View style={{ flexDirection: 'row', gap: 8, marginHorizontal: spacing.lg, marginBottom: spacing.md }}>
-        <TouchableOpacity onPress={handleDownloadSample} style={[styles.actionBtn, { backgroundColor: colors.bgPanel, borderColor: colors.border, borderWidth: 1 }]}>
-          <IconDownload size={14} color={colors.textPrimary} />
-          <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Sample</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleUploadExcel} style={[styles.actionBtn, { backgroundColor: colors.accent, flex: 1, justifyContent: 'center' }]} disabled={isUploading}>
-          {isUploading ? <ActivityIndicator size="small" color="#fff" /> : (
-            <>
-              <IconCloudUpload size={14} color="#fff" />
-              <Text style={[styles.actionBtnText, { color: '#fff' }]}>Upload Excel</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* Search */}
-      <View style={styles.searchWrap}>
-        <IconSearch size={16} color={colors.textMuted} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search name, phone, project..."
-          placeholderTextColor={colors.textMuted}
-          value={search}
-          onChangeText={setSearch}
-        />
-        {search ? (
-          <TouchableOpacity onPress={() => setSearch('')}>
-            <IconCloseCircle size={16} color={colors.textMuted} />
-          </TouchableOpacity>
-        ) : null}
-      </View>
-
-      <TouchableOpacity 
-        style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, alignItems: 'flex-start' }}
-        onPress={() => setShowRecorderSetup(true)}
-      >
-        <Text style={{ fontSize: 13, color: colors.accent, fontWeight: '500' }}>
-          Automatic Call Recording Not Working? Tap Here
-        </Text>
-      </TouchableOpacity>
-
-      {/* Status Filter Pills */}
-      <View style={{ marginBottom: spacing.xs }}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersRow}
-        >
-          {FILTERS.map(f => (
-            <TouchableOpacity key={f} onPress={() => setFilter(f)}
-              style={[styles.filterPill, filter === f && styles.filterPillActive]}>
-              <Text style={[styles.filterPillText, filter === f && styles.filterPillTextActive]}>{f}</Text>
+          {/* Excel Bulk Upload Actions */}
+          <View style={{ flexDirection: 'row', gap: 8, marginHorizontal: spacing.lg, marginBottom: spacing.md }}>
+            <TouchableOpacity onPress={handleDownloadSample} style={[styles.actionBtn, { backgroundColor: colors.bgPanel, borderColor: colors.border, borderWidth: 1 }]}>
+              <IconDownload size={14} color={colors.textPrimary} />
+              <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Sample</Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Follow-up Date Filter */}
-      <View style={{ paddingBottom: spacing.sm }}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dateFilterRow}
-        >
-          {([
-            ['all', 'All Dates'],
-            ['today', 'Today'],
-            ['tomorrow', 'Tomorrow'],
-          ] as const).map(([val, label]) => (
-            <TouchableOpacity key={val} onPress={() => setDateFilter(val)}
-              style={[styles.datePill, dateFilter === val && styles.datePillActive]}>
-              <IconCalendar size={12} color={dateFilter === val ? colors.warning : colors.textMuted} />
-              <Text style={[styles.datePillText, dateFilter === val && styles.datePillTextActive]}>{label}</Text>
+            <TouchableOpacity onPress={handleUploadExcel} style={[styles.actionBtn, { backgroundColor: colors.accent, flex: 1, justifyContent: 'center' }]} disabled={isUploading}>
+              {isUploading ? <ActivityIndicator size="small" color="#fff" /> : (
+                <>
+                  <IconCloudUpload size={14} color="#fff" />
+                  <Text style={[styles.actionBtnText, { color: '#fff' }]}>Upload Excel</Text>
+                </>
+              )}
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+          </View>
+
+          {/* Search */}
+          <View style={styles.searchWrap}>
+            <IconSearch size={16} color={colors.textMuted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search name, phone, project..."
+              placeholderTextColor={colors.textMuted}
+              value={search}
+              onChangeText={setSearch}
+            />
+            {search ? (
+              <TouchableOpacity onPress={() => setSearch('')}>
+                <IconCloseCircle size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          <TouchableOpacity 
+            style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, alignItems: 'flex-start' }}
+            onPress={() => setShowRecorderSetup(true)}
+          >
+            <Text style={{ fontSize: 13, color: colors.accent, fontWeight: '500' }}>
+              Automatic Call Recording Not Working? Tap Here
+            </Text>
+          </TouchableOpacity>
+
+          {/* Status Filter Pills */}
+          <View style={{ marginBottom: spacing.xs }}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filtersRow}
+            >
+              {FILTERS.map(f => (
+                <TouchableOpacity key={f} onPress={() => setFilter(f)}
+                  style={[styles.filterPill, filter === f && styles.filterPillActive]}>
+                  <Text style={[styles.filterPillText, filter === f && styles.filterPillTextActive]}>{f}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Follow-up Date Filter */}
+          <View style={{ paddingBottom: spacing.sm }}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.dateFilterRow}
+            >
+              {([
+                ['all', 'All Dates'],
+                ['today', 'Today'],
+                ['tomorrow', 'Tomorrow'],
+              ] as const).map(([val, label]) => (
+                <TouchableOpacity key={val} onPress={() => setDateFilter(val)}
+                  style={[styles.datePill, dateFilter === val && styles.datePillActive]}>
+                  <IconCalendar size={12} color={dateFilter === val ? colors.warning : colors.textMuted} />
+                  <Text style={[styles.datePillText, dateFilter === val && styles.datePillTextActive]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </>
+      )}
 
       {topThree.length > 0 && (
         <View style={{ marginBottom: spacing.md }}>
@@ -667,7 +790,9 @@ export default function CallSheetScreen({ navigation, route }: any) {
               <ClientItem 
                 key={c.id}
                 item={c}
-                onPress={(cl: Client) => navigation.navigate('ClientDetail', { client: cl })}
+                onPress={handlePressClient}
+                onLongPress={handleLongPressClient}
+                isSelected={selectedClientIds.includes(c.id)}
                 onStartCall={startCall}
                           onWhatsApp={async (phone: string) => {
                   try {
@@ -697,7 +822,8 @@ export default function CallSheetScreen({ navigation, route }: any) {
         <Text style={[styles.sectionTitle, { marginHorizontal: spacing.lg, marginTop: spacing.sm, marginBottom: spacing.sm }]}>All Other Clients</Text>
       )}
     </View>
-  );
+    );
+  };
 
   return (
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -808,6 +934,111 @@ export default function CallSheetScreen({ navigation, route }: any) {
                   disabled={updatingDate}
                 >
                   {updatingDate ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: '800' }}>Update & Enable Actions</Text>}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Share Clients Modal */}
+        <Modal
+          visible={showShareModal}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setShowShareModal(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '80%' }}>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.textPrimary, marginBottom: 8 }}>Share Clients</Text>
+              <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 20 }}>
+                Select an employee to transfer {selectedClientIds.length} clients to.
+              </Text>
+              
+              <ScrollView style={{ marginBottom: 20 }} showsVerticalScrollIndicator={false}>
+                {employees.filter(e => ['User', 'user', 'Sales', 'sales', 'Field', 'field'].includes(e.role)).length === 0 ? (
+                  <Text style={{ color: colors.textMuted, textAlign: 'center', marginVertical: 20 }}>No other Sales or Field employees found.</Text>
+                ) : (
+                  <>
+                    {/* Sales Section */}
+                    {employees.filter(e => ['User', 'user', 'Sales', 'sales'].includes(e.role)).length > 0 && (
+                      <View style={{ marginBottom: 16 }}>
+                        <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Sales Team</Text>
+                        {employees.filter(e => ['User', 'user', 'Sales', 'sales'].includes(e.role)).map(emp => (
+                          <TouchableOpacity
+                            key={emp.id}
+                            onPress={() => setSelectedEmployeeId(emp.id)}
+                            style={{
+                              padding: 16,
+                              borderRadius: 12,
+                              backgroundColor: selectedEmployeeId === emp.id ? colors.accent + '22' : colors.bgPanel,
+                              borderWidth: 1,
+                              borderColor: selectedEmployeeId === emp.id ? colors.accent : colors.border,
+                              marginBottom: 10,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between'
+                            }}
+                          >
+                            <View>
+                              <Text style={{ color: colors.textPrimary, fontWeight: '600', fontSize: 15 }}>{emp.name}</Text>
+                              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>Sales Executive</Text>
+                            </View>
+                            {selectedEmployeeId === emp.id && (
+                              <IconCheck size={20} color={colors.accent} />
+                            )}
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+
+                    {/* Field Section */}
+                    {employees.filter(e => ['Field', 'field'].includes(e.role)).length > 0 && (
+                      <View style={{ marginBottom: 16 }}>
+                        <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Field Team</Text>
+                        {employees.filter(e => ['Field', 'field'].includes(e.role)).map(emp => (
+                          <TouchableOpacity
+                            key={emp.id}
+                            onPress={() => setSelectedEmployeeId(emp.id)}
+                            style={{
+                              padding: 16,
+                              borderRadius: 12,
+                              backgroundColor: selectedEmployeeId === emp.id ? colors.accent + '22' : colors.bgPanel,
+                              borderWidth: 1,
+                              borderColor: selectedEmployeeId === emp.id ? colors.accent : colors.border,
+                              marginBottom: 10,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between'
+                            }}
+                          >
+                            <View>
+                              <Text style={{ color: colors.textPrimary, fontWeight: '600', fontSize: 15 }}>{emp.name}</Text>
+                              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>Field Agent</Text>
+                            </View>
+                            {selectedEmployeeId === emp.id && (
+                              <IconCheck size={20} color={colors.accent} />
+                            )}
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </>
+                )}
+              </ScrollView>
+
+              <View style={{ flexDirection: 'row', gap: 12, paddingBottom: 20 }}>
+                <TouchableOpacity 
+                  style={{ flex: 1, padding: 14, borderRadius: 12, backgroundColor: colors.bgPanel, alignItems: 'center' }}
+                  onPress={() => { setShowShareModal(false); setSelectedEmployeeId(null); }}
+                >
+                  <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={{ flex: 1, padding: 14, borderRadius: 12, backgroundColor: selectedEmployeeId ? colors.accent : colors.textMuted, alignItems: 'center' }}
+                  onPress={handleShareClients}
+                  disabled={!selectedEmployeeId}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>Confirm Share</Text>
                 </TouchableOpacity>
               </View>
             </View>

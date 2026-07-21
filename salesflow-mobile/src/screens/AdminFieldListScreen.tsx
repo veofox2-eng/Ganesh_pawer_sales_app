@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { spacing, radius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
-import { IconSearch, IconPeopleOutline, IconCloseCircle, IconChevronForward } from '../lib/Icons';
+import { IconSearch, IconPeopleOutline, IconCloseCircle, IconChevronForward, IconDocumentText } from '../lib/Icons';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function AdminFieldListScreen({ navigation }: any) {
@@ -117,6 +117,19 @@ export default function AdminFieldListScreen({ navigation }: any) {
          )}
       </View>
       
+      <TouchableOpacity 
+        style={[styles.sharedBtn, { backgroundColor: colors.accent + '15', borderColor: colors.accent + '40' }]}
+        onPress={() => navigation.navigate('AdminSharedClients')}
+        activeOpacity={0.8}
+      >
+        <IconDocumentText size={20} color={colors.accent} />
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: colors.accent }}>Shared Clients Log</Text>
+          <Text style={{ fontSize: 12, color: colors.textMuted }}>View all clients shared between employees</Text>
+        </View>
+        <IconChevronForward size={20} color={colors.accent} />
+      </TouchableOpacity>
+      
       {loading && employees.length === 0 ? (
         <View style={styles.centered}><ActivityIndicator color={colors.warning} size="large" /></View>
       ) : (
@@ -183,5 +196,11 @@ const styles = StyleSheet.create({
   liveBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginLeft: 10 },
   liveText: { fontSize: 9, fontWeight: 'bold' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  empty: { alignItems: 'center', marginTop: 100 }
+  empty: { alignItems: 'center', marginTop: 100 },
+  sharedBtn: {
+    flexDirection: 'row', alignItems: 'center',
+    padding: spacing.md, 
+    marginHorizontal: 20, marginBottom: 15,
+    borderRadius: radius.lg, borderWidth: 1,
+  },
 });

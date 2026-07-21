@@ -72,7 +72,7 @@ export default function AdminEmployeeDetailScreen({ route, navigation }: any) {
   const { profile, role } = route.params || {};
   const isField = role === 'Field';
 
-  const tabs = isField ? ['Map', 'Clients', 'Timeline', 'Call Log', 'Other Records', 'Leads'] : ['Clients', 'Timeline', 'Call Log', 'Other Records', 'Leads'];
+  const tabs = isField ? ['Map', 'Clients', 'Call Log', 'Other Records', 'Leads'] : ['Clients', 'Call Log', 'Other Records', 'Leads'];
   const [activeTab, setActiveTab] = useState(tabs[0]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -82,7 +82,6 @@ export default function AdminEmployeeDetailScreen({ route, navigation }: any) {
   const [address, setAddress] = useState<string | null>(null);
   const [isEnabled, setIsEnabled] = useState(profile?.is_enabled ?? true);
   const [stats, setStats] = useState({ total: 0, wins: 0, lost: 0, km: '0' });
-  const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
 
   const [playingUri, setPlayingUri] = useState<string | null>(null);
   const [playbackLoading, setPlaybackLoading] = useState(false);
@@ -154,9 +153,6 @@ export default function AdminEmployeeDetailScreen({ route, navigation }: any) {
       ]
     );
   };
-  const [selectedClient, setSelectedClient] = useState<any>(null);
-  const [modalFilter, setModalFilter] = useState('ALL');
-
   // Leads state
   const [leads, setLeads] = useState<any[]>([]);
   const [fetchingApplicants, setFetchingApplicants] = useState(false);
@@ -364,12 +360,11 @@ export default function AdminEmployeeDetailScreen({ route, navigation }: any) {
         {clients.map(item => {
           const sColor = item.status === 'Converted' ? colors.success : item.status === 'Lost' ? colors.danger : colors.warning;
           const lColor = item.lead_type === 'Hot' ? '#EF4444' : item.lead_type === 'Warm' ? '#F59E0B' : '#64748B';
-          const expanded = expandedClientId === item.id;
           return (
             <TouchableOpacity
               key={item.id}
-              style={[styles.clientCard, { backgroundColor: colors.bgCard, borderColor: expanded ? sColor : colors.border }]}
-              onPress={() => setExpandedClientId(expanded ? null : item.id)}
+              style={[styles.clientCard, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
+              onPress={() => navigation.navigate('ClientDetail', { client: item })}
               activeOpacity={0.8}
             >
               <View style={[styles.clientAvatar, { backgroundColor: sColor + '22' }]}>
@@ -379,15 +374,6 @@ export default function AdminEmployeeDetailScreen({ route, navigation }: any) {
                 <Text style={[styles.clientName, { color: colors.textPrimary }]}>{item.name}</Text>
                 {!!item.phone && <Text style={[styles.clientSub, { color: colors.textMuted }]}>{item.phone}</Text>}
                 {!!item.project_name && <Text style={[styles.clientSub, { color: colors.textSecondary }]}>{item.project_name}</Text>}
-                {expanded && (
-                  <View style={{ marginTop: 10, gap: 4 }}>
-                    {!!item.email && <Text style={[styles.clientSub, { color: colors.textSecondary }]}>✉ {item.email}</Text>}
-                    {!!item.address && <Text style={[styles.clientSub, { color: colors.textSecondary }]}>📍 {item.address}</Text>}
-                    {!!item.deal_value && <Text style={[styles.clientSub, { color: colors.success }]}>₹ {item.deal_value}</Text>}
-                    {!!item.description && <Text style={[styles.clientSub, { color: colors.textMuted }]}>{item.description}</Text>}
-                    {!!item.reminder_date && <Text style={[styles.clientSub, { color: colors.warning }]}>🔔 Reminder: {fmtTime(item.reminder_date)}</Text>}
-                  </View>
-                )}
               </View>
               <View style={{ alignItems: 'flex-end', gap: 5 }}>
                 <View style={[styles.badge, { backgroundColor: sColor + '22' }]}>
@@ -403,247 +389,6 @@ export default function AdminEmployeeDetailScreen({ route, navigation }: any) {
           );
         })}
       </View>
-    );
-  }
-
-  // ── TIMELINE TAB — shows client cards, tap to see that client's timeline ─────
-  function renderTimelineTab() {
-    if (clients.length === 0) {
-      return (
-        <View style={styles.emptyState}>
-          <IconTime size={52} color={colors.border} />
-          <Text style={[styles.emptyText, { color: colors.textMuted, marginTop: 14 }]}>No clients added yet</Text>
-        </View>
-      );
-    }
-    return (
-      <View style={{ padding: spacing.lg, paddingBottom: 60 }}>
-        {clients.map(item => {
-          const sColor = item.status === 'Converted' ? colors.success : item.status === 'Lost' ? colors.danger : colors.warning;
-          const clientInteractions = timeline.filter(t => t.client_id === item.id);
-          return (
-            <TouchableOpacity
-              key={item.id}
-              style={[styles.clientCard, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
-              onPress={() => setSelectedClient(item)}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.clientAvatar, { backgroundColor: sColor + '22' }]}>
-                <Text style={[styles.clientAvatarText, { color: sColor }]}>{(item.name || 'C')[0].toUpperCase()}</Text>
-              </View>
-              <View style={{ flex: 1, marginLeft: 14 }}>
-                <Text style={[styles.clientName, { color: colors.textPrimary }]}>{item.name}</Text>
-                {!!item.phone && <Text style={[styles.clientSub, { color: colors.textMuted }]}>{item.phone}</Text>}
-                <Text style={[styles.clientSub, { color: colors.textSecondary, marginTop: 3 }]}>
-                  {clientInteractions.length} interaction{clientInteractions.length !== 1 ? 's' : ''}
-                </Text>
-              </View>
-              <View style={{ alignItems: 'flex-end', gap: 5 }}>
-                <View style={[styles.badge, { backgroundColor: sColor + '22' }]}>
-                  <Text style={[styles.badgeText, { color: sColor }]}>{item.status}</Text>
-                </View>
-                <Text style={{ color: colors.accent, fontSize: 18 }}>›</Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    );
-  }
-
-  function renderClientTimelineModal() {
-    if (!selectedClient) return null;
-    let clientItems = timeline
-      .filter(t => t.client_id === selectedClient.id)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-    // Apply Filter
-    if (modalFilter !== 'ALL') {
-      clientItems = clientItems.filter(item => {
-        if (modalFilter === 'CALLS') return item.type === 'CALL_MADE';
-        if (modalFilter === 'RECORDINGS') return item.type === 'CALL_RECORDING' || item.type === 'OTHER_RECORDING';
-        if (modalFilter === 'NOTES') return item.type === 'NOTE_ADDED';
-        if (modalFilter === 'VOICE') return item.type === 'VOICE_INSTRUCTION';
-        if (modalFilter === 'FILES') return item.type === 'ATTACHMENT_ADDED';
-        if (modalFilter === 'MAPS') return ['PINNED_LOCATION', 'LOCATION_SEARCHED', 'LOCATION_REACHED', 'TRAVEL_PLAN'].includes(item.type);
-        return true;
-      });
-    }
-
-    const sColor = selectedClient.status === 'Converted' ? colors.success
-      : selectedClient.status === 'Lost' ? colors.danger : colors.warning;
-
-    // Helper: icon color per type (matches ClientDetailScreen's getInteractionIconColor)
-    function iconColor(type: string) {
-      const map: Record<string, string> = {
-        NOTE_ADDED:        colors.accent,
-        CALL_MADE:         colors.success,
-        CALL_RECORDING:    colors.danger,
-        VOICE_INSTRUCTION: '#A78BFA',
-        ATTACHMENT_ADDED:  '#06B6D4',
-        PINNED_LOCATION:   colors.accent,
-        WHATSAPP_CONTACT:  '#25D366',
-        PROFILE_UPDATED:   colors.warning,
-        OTHER_RECORDING:   '#F59E0B',
-      };
-      return map[type] || colors.textMuted;
-    }
-
-    // Helper: label per type (matches ClientDetailScreen's getInteractionLabel)
-    function interactionLabel(type: string) {
-      const map: Record<string, string> = {
-        NOTE_ADDED:        'Note Added',
-        CALL_MADE:         'Call Logged',
-        CALL_RECORDING:    'Call Recording',
-        VOICE_INSTRUCTION: 'Voice Note',
-        ATTACHMENT_ADDED:  'Attachment',
-        PINNED_LOCATION:   'Pinned Location',
-        WHATSAPP_CONTACT:  'WhatsApp Chat',
-        PROFILE_UPDATED:   'Profile Updated',
-        OTHER_RECORDING:   'Other Recording',
-        LOCATION_SEARCHED: 'Location Searched',
-        LOCATION_REACHED:  'Reached Destination',
-        TRAVEL_PLAN:       'Travel Plan',
-      };
-      return map[type] || type;
-    }
-
-    return (
-      <Modal
-        visible={!!selectedClient}
-        animationType="slide"
-        onRequestClose={() => setSelectedClient(null)}
-      >
-        <View style={[styles.container, { backgroundColor: colors.bg }]}>
-          {/* Modal Header */}
-          <View style={[styles.header, { paddingTop: insets.top + 12, borderBottomWidth: 1, borderBottomColor: colors.border }]}>
-            <TouchableOpacity onPress={() => setSelectedClient(null)} style={styles.backBtn}>
-              <IconChevronBack color={colors.textPrimary} size={28} />
-            </TouchableOpacity>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{selectedClient.name}</Text>
-              <Text style={[styles.headerSub, { color: sColor }]}>{selectedClient.status} · {clientItems.length} activities</Text>
-            </View>
-          </View>
-
-          <FlatList
-            data={clientItems}
-            keyExtractor={item => item.id}
-            contentContainerStyle={{ padding: spacing.lg, paddingBottom: 100, flexGrow: 1 }}
-            ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <IconTime size={52} color={colors.border} />
-                <Text style={[styles.emptyText, { color: colors.textMuted, marginTop: 14 }]}>No activity for this client yet</Text>
-              </View>
-            }
-            ListHeaderComponent={
-              <View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 15, marginTop: -5 }}>
-                  {['ALL', 'CALLS', 'RECORDINGS', 'NOTES', 'VOICE', 'FILES', 'MAPS']
-                    .filter(f => f !== 'MAPS' || isField)
-                    .map(f => {
-                      const active = modalFilter === f;
-                      return (
-                        <TouchableOpacity
-                          key={f}
-                          onPress={() => setModalFilter(f)}
-                          style={{
-                            paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
-                            backgroundColor: active ? colors.accent : colors.bgPanel,
-                            marginRight: 8, borderWidth: 1, borderColor: active ? colors.accent : colors.border
-                          }}
-                        >
-                          <Text style={{ fontSize: 11, fontWeight: '800', color: active ? '#fff' : colors.textMuted }}>{f}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                </ScrollView>
-                <Text style={{ fontSize: 12, fontWeight: '600', letterSpacing: 0.07, textTransform: 'uppercase', color: colors.textMuted, marginBottom: 16 }}>
-                  {modalFilter === 'ALL' ? 'All Activity' : `${modalFilter} only`} • Newest First
-                </Text>
-              </View>
-            }
-            renderItem={({ item, index }) => {
-              const clr = iconColor(item.type);
-              const label = interactionLabel(item.type);
-              const isAudio = item.media_url && (item.type === 'CALL_RECORDING' || item.type === 'VOICE_INSTRUCTION' || item.type === 'OTHER_RECORDING');
-              return (
-                <View style={{ flexDirection: 'row', marginBottom: 20, position: 'relative' }}>
-                  <View style={{
-                    width: 32, height: 32, borderRadius: 16,
-                    backgroundColor: clr + '20', borderWidth: 1, borderColor: clr + '40',
-                    alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 12,
-                  }}>
-                    <Text style={{ fontSize: 13 }}>
-                      {item.type === 'CALL_MADE' ? '📞'
-                        : item.type === 'CALL_RECORDING' ? '🎙'
-                        : item.type === 'VOICE_INSTRUCTION' ? '🎤'
-                        : item.type === 'NOTE_ADDED' ? '📝'
-                        : item.type === 'ATTACHMENT_ADDED' ? '📎'
-                        : item.type === 'PINNED_LOCATION' ? '📍'
-                        : item.type === 'WHATSAPP_CONTACT' ? '💬'
-                        : item.type === 'PROFILE_UPDATED' ? '✅'
-                        : item.type === 'OTHER_RECORDING' ? '📵'
-                        : '•'}
-                    </Text>
-                  </View>
-                  {index < clientItems.length - 1 && (
-                    <View style={{
-                      position: 'absolute', left: 15, top: 32,
-                      width: 1, bottom: -20, backgroundColor: colors.border,
-                    }} />
-                  )}
-                  <View style={{ flex: 1, paddingTop: 4 }}>
-                    <Text style={{ fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.05, color: clr, marginBottom: 4 }}>
-                      {label}
-                    </Text>
-                    {!!item.content && (
-                      <Text style={{ fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: 4 }}>
-                        {item.content}
-                      </Text>
-                    )}
-                    {isAudio && !!item.media_url && (
-                      <TouchableOpacity
-                        style={{
-                          flexDirection: 'row', alignItems: 'center',
-                          paddingHorizontal: 12, paddingVertical: 8,
-                          borderRadius: 8, borderWidth: 1, borderColor: clr + '60',
-                          backgroundColor: colors.bgPanel, marginBottom: 6,
-                          alignSelf: 'flex-start',
-                        }}
-                        onPress={async () => {
-                          try { await Linking.openURL(item.media_url); }
-                          catch { Alert.alert('Error', 'Could not open recording.'); }
-                        }}
-                      >
-                        <Text style={{ fontSize: 16 }}>▶</Text>
-                        <Text style={{ fontSize: 13, fontWeight: '600', marginLeft: 8, color: clr }}>Play Recording</Text>
-                      </TouchableOpacity>
-                    )}
-                    {item.media_url && !isAudio && (
-                      <TouchableOpacity
-                        style={{
-                          flexDirection: 'row', alignItems: 'center',
-                          paddingHorizontal: 12, paddingVertical: 8,
-                          borderRadius: 8, borderWidth: 1, borderColor: colors.accent + '60',
-                          backgroundColor: colors.bgPanel, marginBottom: 6,
-                          alignSelf: 'flex-start',
-                        }}
-                        onPress={() => Linking.openURL(item.media_url)}
-                      >
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.accent }}>📎 Open Attachment</Text>
-                      </TouchableOpacity>
-                    )}
-                    <Text style={{ fontSize: 12, color: colors.textMuted }}>
-                      {fmtTime(item.created_at)}
-                    </Text>
-                  </View>
-                </View>
-              );
-            }}
-          />
-        </View>
-      </Modal>
     );
   }
 
@@ -674,7 +419,17 @@ export default function AdminEmployeeDetailScreen({ route, navigation }: any) {
               const clr = isRec ? colors.danger : colors.success;
               const clientName = (item as any).clients?.name;
               return (
-                <View key={item.id} style={[styles.logCard, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.logCard, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    const fullClient = clients.find(c => c.id === item.client_id);
+                    if (fullClient) {
+                      navigation.navigate('ClientDetail', { client: fullClient });
+                    }
+                  }}
+                >
                   <View style={[styles.logAvatar, { backgroundColor: clr }]}>
                     <Text style={styles.logAvatarText}>{isRec ? '🎙' : '📞'}</Text>
                   </View>
@@ -694,7 +449,7 @@ export default function AdminEmployeeDetailScreen({ route, navigation }: any) {
                       <Text style={{ color: colors.textMuted, fontSize: 11 }}>{fmtDate(item.created_at)} • {fmtClock(item.created_at)}</Text>
                     </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               );
             })}
           </View>
@@ -729,7 +484,17 @@ export default function AdminEmployeeDetailScreen({ route, navigation }: any) {
               const isPlaying = playingUri === item.media_url;
 
               return (
-                <View key={item.id} style={[styles.logCard, { backgroundColor: colors.bgCard, borderColor: colors.warning + '55', borderLeftWidth: 3 }]}>
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.logCard, { backgroundColor: colors.bgCard, borderColor: colors.warning + '55', borderLeftWidth: 3 }]}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    const fullClient = clients.find(c => c.id === item.client_id);
+                    if (fullClient) {
+                      navigation.navigate('ClientDetail', { client: fullClient });
+                    }
+                  }}
+                >
                   <View style={[styles.logAvatar, { backgroundColor: colors.warning }]}>
                     <IconMic size={18} color="#fff" />
                   </View>
@@ -779,7 +544,7 @@ export default function AdminEmployeeDetailScreen({ route, navigation }: any) {
                       </TouchableOpacity>
                     </View>
                   ) : null}
-                </View>
+                </TouchableOpacity>
               );
             })}
           </View>
@@ -912,16 +677,12 @@ export default function AdminEmployeeDetailScreen({ route, navigation }: any) {
           >
             {activeTab === 'Map' && renderMapTab()}
             {activeTab === 'Clients' && renderClientsTab()}
-            {activeTab === 'Timeline' && renderTimelineTab()}
             {activeTab === 'Call Log' && renderCallLogTab()}
             {activeTab === 'Other Records' && renderOtherRecordsTab()}
             {activeTab === 'Leads' && renderLeadsTab()}
           </ScrollView>
         )}
       </View>
-
-      {/* Client timeline modal — shown when admin taps a client in Timeline tab */}
-      {renderClientTimelineModal()}
     </View>
   );
 }

@@ -45,6 +45,7 @@ import LeadSectionScreen from '../screens/LeadSectionScreen';
 import LeadProfileDetailScreen from '../screens/LeadProfileDetailScreen';
 import OtherRecordsScreen from '../screens/OtherRecordsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import SharedByMeScreen from '../screens/SharedByMeScreen';
 
 // ── Admin-only screens
 import AdminSalesListScreen from '../screens/AdminSalesListScreen';
@@ -54,6 +55,7 @@ import AdminApprovalsScreen from '../screens/AdminApprovalsScreen';
 import AdminCreateUserScreen from '../screens/AdminCreateUserScreen';
 import AdminUserDetailScreen from '../screens/AdminUserDetailScreen';
 import AdminClientStatusScreen from '../screens/AdminClientStatusScreen';
+import AdminSharedClientsScreen from '../screens/AdminSharedClientsScreen';
 
 // ── SuperAdmin screens
 import SuperAdminDashboardScreen from '../screens/SuperAdminDashboardScreen';
@@ -100,6 +102,11 @@ function AdminSalesStack() {
       <Stack.Screen name="Dialer" component={DialerScreen} />
       <Stack.Screen name="Attachments" component={AttachmentsScreen} />
       <Stack.Screen name="LeadProfileDetail" component={LeadProfileDetailScreen} />
+      <Stack.Screen name="AdminSharedClients" component={AdminSharedClientsScreen} />
+      <Stack.Screen name="CallSheetList" component={CallSheetScreen} />
+      <Stack.Screen name="OtherRecords" component={OtherRecordsScreen} />
+      <Stack.Screen name="TaskBoard" component={TaskBoardScreen} />
+      <Stack.Screen name="CallHistory" component={CallHistoryScreen} />
     </Stack.Navigator>
   );
 }
@@ -114,6 +121,7 @@ function AdminFieldStack() {
       <Stack.Screen name="Dialer" component={DialerScreen} />
       <Stack.Screen name="Attachments" component={AttachmentsScreen} />
       <Stack.Screen name="LeadProfileDetail" component={LeadProfileDetailScreen} />
+      <Stack.Screen name="AdminSharedClients" component={AdminSharedClientsScreen} />
     </Stack.Navigator>
   );
 }
@@ -228,6 +236,7 @@ function EmployeeMainTabs() {
       {profile?.feature_flags?.dashboards?.other_records !== false && (
         <Tab.Screen name="Other Records" component={OtherRecordsScreen} options={{ tabBarButton: () => null }} />
       )}
+      <Tab.Screen name="Shared By Me" component={SharedByMeScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarButton: () => null }} />
     </Tab.Navigator>
   );

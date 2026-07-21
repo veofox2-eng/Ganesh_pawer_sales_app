@@ -95,7 +95,7 @@ export default function SuperAdminUserControlScreen({ route, navigation }: any) 
           <IconChevronBack size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitles}>
-          <Text style={styles.title}>{profile.full_name}</Text>
+          <Text style={styles.title}>{profile.username || 'User'}</Text>
           <Text style={styles.subtitle}>{profile.role} Features</Text>
         </View>
       </View>

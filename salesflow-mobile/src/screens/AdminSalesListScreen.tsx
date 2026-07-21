@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { spacing, radius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
-import { IconSearch, IconPeopleOutline, IconCloseCircle, IconChevronForward, IconTrendingUp, IconLogout } from '../lib/Icons';
+import { IconSearch, IconPeopleOutline, IconCloseCircle, IconChevronForward, IconTrendingUp, IconLogout, IconDocumentText, IconCallOutline } from '../lib/Icons';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 
 interface SalesEmployee {
@@ -149,9 +149,8 @@ export default function AdminSalesListScreen({ navigation }: any) {
     </TouchableOpacity>
   ), [colors, navigation]);
 
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
-      {/* Header */}
+  const renderHeader = () => (
+    <View>
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={[styles.title, { color: colors.textPrimary }]}>Sales Team</Text>
@@ -181,7 +180,53 @@ export default function AdminSalesListScreen({ navigation }: any) {
         </View>
       </View>
 
-      {/* Search */}
+      <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: colors.textPrimary, marginBottom: 12 }}>My Workspace</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' }}>
+          
+          <TouchableOpacity 
+            style={[styles.toolBtn, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
+            onPress={() => navigation.navigate('CallSheetList')}
+          >
+            <View style={[styles.toolIcon, { backgroundColor: colors.accent + '20' }]}>
+              <IconPeopleOutline size={22} color={colors.accent} />
+            </View>
+            <Text style={[styles.toolText, { color: colors.textPrimary }]}>Clients Page</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.toolBtn, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
+            onPress={() => navigation.navigate('OtherRecords')}
+          >
+            <View style={[styles.toolIcon, { backgroundColor: colors.success + '20' }]}>
+              <IconDocumentText size={22} color={colors.success} />
+            </View>
+            <Text style={[styles.toolText, { color: colors.textPrimary }]}>Other Records</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.toolBtn, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
+            onPress={() => navigation.navigate('TaskBoard')}
+          >
+            <View style={[styles.toolIcon, { backgroundColor: '#f59e0b' + '20' }]}>
+              <IconTrendingUp size={22} color="#f59e0b" />
+            </View>
+            <Text style={[styles.toolText, { color: colors.textPrimary }]}>Timeline</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.toolBtn, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
+            onPress={() => navigation.navigate('CallHistory')}
+          >
+            <View style={[styles.toolIcon, { backgroundColor: '#8b5cf6' + '20' }]}>
+              <IconCallOutline size={22} color="#8b5cf6" />
+            </View>
+            <Text style={[styles.toolText, { color: colors.textPrimary }]}>Call Logs</Text>
+          </TouchableOpacity>
+
+        </View>
+      </View>
+
       <View style={[styles.searchWrap, { backgroundColor: colors.bgPanel, borderColor: colors.border }]}>
         <IconSearch size={16} color={colors.textMuted} />
         <TextInput
@@ -198,6 +243,23 @@ export default function AdminSalesListScreen({ navigation }: any) {
         ) : null}
       </View>
 
+      <TouchableOpacity 
+        style={[styles.sharedBtn, { backgroundColor: colors.accent + '15', borderColor: colors.accent + '40' }]}
+        onPress={() => navigation.navigate('AdminSharedClients')}
+        activeOpacity={0.8}
+      >
+        <IconDocumentText size={20} color={colors.accent} />
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: colors.accent }}>Shared Clients Log</Text>
+          <Text style={{ fontSize: 12, color: colors.textMuted }}>View all clients shared between employees</Text>
+        </View>
+        <IconChevronForward size={20} color={colors.accent} />
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.success} />
@@ -208,6 +270,7 @@ export default function AdminSalesListScreen({ navigation }: any) {
           data={filtered}
           keyExtractor={item => item.id}
           renderItem={renderItem}
+          ListHeaderComponent={renderHeader}
           contentContainerStyle={styles.list}
           initialNumToRender={10}
           maxToRenderPerBatch={10}
@@ -271,4 +334,21 @@ const styles = StyleSheet.create({
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 12 },
   loadingText: { fontSize: 14 },
   emptyText: { fontSize: 14, marginTop: 8 },
+  sharedBtn: {
+    flexDirection: 'row', alignItems: 'center',
+    padding: spacing.md, 
+    marginHorizontal: spacing.lg, marginBottom: spacing.md,
+    borderRadius: radius.lg, borderWidth: 1,
+  },
+  toolBtn: {
+    width: '48%', padding: 14, borderRadius: 16,
+    borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 12
+  },
+  toolIcon: {
+    width: 38, height: 38, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center'
+  },
+  toolText: {
+    fontSize: 14, fontWeight: '700'
+  }
 });

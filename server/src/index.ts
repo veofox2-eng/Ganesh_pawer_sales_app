@@ -19,16 +19,69 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'API is running smoothly!' });
 });
 
+app.get('/api/employee-emails', async (req, res) => {
+  try {
+    if (!supabaseKey) {
+      throw new Error('SUPABASE_SERVICE_ROLE_KEY is missing');
+    }
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('feature_flags');
+
+    if (error) throw error;
+
+    const emails = (data || [])
+      .map((p: any) => p.feature_flags?.email)
+      .filter((email: any) => typeof email === 'string' && email.length > 0);
+
+    const defaultEmails = ['backendadmin1@gmail.com', 'foxsuperadmin@gmail.com', 'tester@gmail.com'];
+    const allEmails = Array.from(new Set([...defaultEmails, ...emails]));
+
+    res.json({ emails: allEmails });
+  } catch (err: any) {
+    console.error('Error fetching employee emails:', err);
+    res.json({ emails: ['backendadmin1@gmail.com', 'foxsuperadmin@gmail.com', 'tester@gmail.com'] });
+  }
+});
+
 // Backend endpoints for Ganesh Pawer Sales App
 
 app.post('/api/create-employee', async (req, res) => {
-  const { email, password, role, industry_position } = req.body;
+  const { email, username, password, role, industry_position } = req.body;
   
   if (!email || !password || !role) {
     return res.status(400).json({ error: 'Email, password, and role are required' });
   }
   
   try {
+    // --- 1. Verify Tenant Limits ---
+    const { data: config } = await supabase.from('tenant_config').select('*').eq('id', 1).single();
+    if (config) {
+      // Build the query to count existing users for this role
+      let query = supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', role);
+      
+      // If Admin, ignore web admins
+      if (role === 'Admin') {
+        query = query.neq('username', 'Super Administrator').neq('username', 'Foxdigital Backend (DO NOT DELETE)');
+      }
+
+      const { count, error: countError } = await query;
+      
+      if (!countError && count !== null) {
+        if (role === 'Admin' && count >= config.max_admin) {
+          return res.status(403).json({ error: 'Administrator limit exceeded. Contact Fox Digital.' });
+        }
+        if (role === 'Sales' && count >= config.max_user) {
+          return res.status(403).json({ error: 'Sales limit exceeded. Contact Fox Digital.' });
+        }
+        if (role === 'Field' && count >= config.max_field) {
+          return res.status(403).json({ error: 'Field limit exceeded. Contact Fox Digital.' });
+        }
+      }
+    }
+    // --------------------------------
+
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -61,6 +114,7 @@ app.post('/api/create-employee', async (req, res) => {
           .from('profiles')
           .update({ 
             role: role, 
+            username: username || null,
             is_enabled: true, 
             approval_status: 'Approved', 
             feature_flags: { ...existingProfile.feature_flags, industry_position: industry_position || null, email: email, initial_password: password }
@@ -73,6 +127,7 @@ app.post('/api/create-employee', async (req, res) => {
           .insert([{ 
             id: authData.user.id, 
             role: role, 
+            username: username || null,
             is_enabled: true, 
             approval_status: 'Approved',
             feature_flags: { industry_position: industry_position || null, email: email, initial_password: password }

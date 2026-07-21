@@ -85,7 +85,7 @@ export default function SidebarOverlay() {
     }, 250);
   };
 
-  if (!isSidebarOpen && slideAnim._value === -SIDEBAR_WIDTH) {
+  if (!isSidebarOpen && (slideAnim as any)._value === -SIDEBAR_WIDTH) {
     // Return null completely when fully closed to avoid trapping gestures
     return null;
   }
@@ -184,6 +184,11 @@ export default function SidebarOverlay() {
                       <Text style={[styles.navText, { color: colors.textPrimary }]}>Map</Text>
                     </TouchableOpacity>
                   )}
+                  
+                  <TouchableOpacity style={styles.navItem} onPress={() => navigateTo('Shared By Me')}>
+                    <Ionicons name="share-social-outline" size={22} color={colors.accent} />
+                    <Text style={[styles.navText, { color: colors.textPrimary }]}>Shared By Me</Text>
+                  </TouchableOpacity>
                 </>
               )}
               </>
@@ -224,22 +229,22 @@ export default function SidebarOverlay() {
                   <Text style={{ color: colors.textMuted, marginTop: 16, fontWeight: '600' }}>Super Admin System</Text>
                 </View>
               )}
-            </ScrollView>
 
-            {/* Footer */}
-            <View style={[styles.footer, { borderTopColor: colors.border }]}>
+              <View style={[styles.divider, { backgroundColor: colors.border, marginTop: 16, marginBottom: 16 }]} />
+
+              {/* Footer Items Moved Inside ScrollView */}
               {profile?.feature_flags?.dashboards?.settings !== false && (
-                <TouchableOpacity style={[styles.navItem, { paddingHorizontal: 24, paddingBottom: 16 }]} onPress={() => navigateTo('Settings')}>
+                <TouchableOpacity style={styles.navItem} onPress={() => navigateTo('Settings')}>
                   <Ionicons name="settings-outline" size={22} color={colors.textPrimary} />
                   <Text style={[styles.navText, { color: colors.textPrimary }]}>Settings</Text>
                 </TouchableOpacity>
               )}
 
-              <TouchableOpacity style={[styles.logoutBtn, { paddingHorizontal: 24 }]} onPress={handleSignOut}>
+              <TouchableOpacity style={[styles.navItem, { marginBottom: 40 }]} onPress={handleSignOut}>
                 <IconLogout size={22} color="#EF4444" />
                 <Text style={styles.logoutText}>Sign Out</Text>
               </TouchableOpacity>
-            </View>
+            </ScrollView>
           </SafeAreaView>
         </Animated.View>
       </View>

@@ -1,0 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-fox-bg: #030712;
+  --color-fox-bg-card: rgba(15, 23, 42, 0.6);
+  --color-fox-border: rgba(255, 255, 255, 0.08);
+  --color-fox-border-light: rgba(255, 255, 255, 0.15);
+  --color-fox-accent: #3b82f6;
+  
+  --font-sans: 'Outfit', 'Inter', sans-serif;
+}
+
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-fox-border, currentColor);
+  }
+
+  body {
+    background-color: var(--color-fox-bg);
+    color: #f8fafc;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+}
+
+.glass-card {
+  background: var(--color-fox-bg-card);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid var(--color-fox-border);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Hide scrollbars globally for a sleek, app-like UI */
+::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+
+/* Hide native number input arrows */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}

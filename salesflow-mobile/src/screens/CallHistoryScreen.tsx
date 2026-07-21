@@ -145,7 +145,19 @@ export default function CallHistoryScreen({ navigation }: any) {
     const initials = getInitials(clientName);
 
     return (
-      <View key={log.id} style={styles.logCard}>
+      <TouchableOpacity
+        key={log.id}
+        style={styles.logCard}
+        activeOpacity={0.8}
+        onPress={async () => {
+          if (log.client_id) {
+            const { data } = await supabase.from('clients').select('*').eq('id', log.client_id).single();
+            if (data) {
+              navigation.navigate('ClientDetail', { client: data });
+            }
+          }
+        }}
+      >
         <View style={[styles.avatar, { backgroundColor: isRecording ? colors.danger : colors.success }]}>
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
@@ -202,7 +214,7 @@ export default function CallHistoryScreen({ navigation }: any) {
             </TouchableOpacity>
           </View>
         ) : null}
-      </View>
+      </TouchableOpacity>
     );
   }
 
