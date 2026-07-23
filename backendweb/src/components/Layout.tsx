@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, UserCog, Shield, Settings,
-  ChevronRight, LogOut, Zap, Search, Activity
+  ChevronRight, LogOut, Zap, Search, Activity, UserMinus, UserX
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
@@ -15,6 +15,8 @@ const navItems = [
   { to: '/dashboard/sales-employees', end: false, Icon: Users, label: 'Sales Employees' },
   { to: '/dashboard/field-employees', end: false, Icon: UserCog, label: 'Field Employees' },
   { to: '/dashboard/admin-employees', end: false, Icon: Shield, label: 'Admin Employees' },
+  { to: '/dashboard/ex-employees', end: false, Icon: UserMinus, label: 'Ex-Employee Details' },
+  { to: '/dashboard/deleted-users', end: false, Icon: UserX, label: 'Deleted Users' },
 ];
 
 const sidebarVariants = {
@@ -89,11 +91,13 @@ export default function Layout({ children }: LayoutProps) {
         {/* Brand Container - Stitch Design */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '2.5rem' }}>
           <div style={{
-            width: 40, height: 40, borderRadius: 8,
-            background: 'var(--text)', color: 'var(--surface)',
+            width: 40, height: 40, borderRadius: 10,
+            background: 'var(--nav-active)', color: '#ffffff',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 16px var(--accent-glow)',
+            border: '1px solid rgba(255,255,255,0.1)'
           }}>
-            <Activity size={24} strokeWidth={2.5} />
+            <Activity size={22} strokeWidth={2.5} />
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1.2 }}>Fox Sales</h1>
@@ -117,8 +121,8 @@ export default function Layout({ children }: LayoutProps) {
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '0.875rem 1.25rem', borderRadius: 9999,
                   textDecoration: 'none',
-                  background: isActive ? 'var(--text)' : 'transparent',
-                  color: isActive ? 'var(--surface)' : 'var(--muted)',
+                  background: isActive ? 'var(--nav-active)' : 'transparent',
+                  color: isActive ? '#ffffff' : 'var(--muted)',
                   transition: 'all 0.2s ease',
                   cursor: 'pointer',
                   fontWeight: isActive ? 600 : 500,
@@ -126,15 +130,15 @@ export default function Layout({ children }: LayoutProps) {
               >
                 {({ isActive }) => (
                   <>
-                    <Icon size={20} color={isActive ? 'var(--surface)' : 'var(--muted)'} />
+                    <Icon size={20} color={isActive ? '#ffffff' : 'var(--muted)'} />
                     <span style={{ fontSize: '0.875rem', letterSpacing: '0.02em' }}>
                       {label}
                     </span>
 
                     {/* Right Arrow */}
                     {isActive ? (
-                      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: 8, background: 'rgba(255,255,255,0.1)' }}>
-                        <ChevronRight size={14} color="var(--surface)" />
+                      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: 8, background: 'rgba(255,255,255,0.2)' }}>
+                        <ChevronRight size={14} color="#ffffff" />
                       </div>
                     ) : (
                       <ChevronRight size={14} color="var(--border)" style={{ marginLeft: 'auto', opacity: 0.5 }} />

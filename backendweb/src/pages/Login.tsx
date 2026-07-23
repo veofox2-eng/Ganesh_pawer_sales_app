@@ -31,7 +31,7 @@ export default function Login() {
     setLoading(true); 
     setError('');
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password
     });
@@ -40,6 +40,20 @@ export default function Login() {
       setError('Invalid credentials. Please try again.');
       setLoading(false);
     } else {
+      if (authData?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_deleted')
+          .eq('id', authData.user.id)
+          .single();
+          
+        if (profile?.is_deleted) {
+          await supabase.auth.signOut();
+          setError('This account has been deactivated or deleted by the administrator.');
+          setLoading(false);
+          return;
+        }
+      }
       setLoading(false);
     }
   };

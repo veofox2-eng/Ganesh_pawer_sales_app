@@ -91,7 +91,7 @@ export default function SidebarOverlay() {
   }
 
   return (
-    <Modal visible={isSidebarOpen} transparent={true} animationType="none" onRequestClose={closeSidebar}>
+    <Modal visible={isSidebarOpen} transparent={true} animationType="none" onRequestClose={closeSidebar} statusBarTranslucent>
       <View style={styles.overlayContainer}>
         {/* Dark Backdrop */}
         <TouchableWithoutFeedback onPress={closeSidebar}>
@@ -130,7 +130,7 @@ export default function SidebarOverlay() {
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
             {/* Navigation Links */}
-            <ScrollView style={styles.navLinks} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+            <ScrollView style={styles.navLinks} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 100 }}>
               
               {!isSuperAdminApp && (
                 <>
@@ -318,7 +318,6 @@ const styles = StyleSheet.create({
   },
   navLinks: {
     flex: 1,
-    padding: 24,
   },
   sectionTitle: {
     fontSize: 12,

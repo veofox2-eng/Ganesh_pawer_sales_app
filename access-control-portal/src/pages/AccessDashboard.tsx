@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
-import { Shield, Search, User, Trash2, CheckCircle, Eye, EyeOff, KeyRound, ChevronDown, UserPlus, LogOut, Sun, Moon } from 'lucide-react';
+import { Shield, Search, User, Trash2, CheckCircle, Eye, EyeOff, KeyRound, ChevronDown, UserPlus, LogOut, Sun, Moon, Edit2 } from 'lucide-react';
 
 const DEFAULT_FEATURES = {
   dashboards: {
@@ -42,6 +42,16 @@ export default function AccessDashboard() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState('');
 
+  // Edit User Modals
+  const [editOptionModal, setEditOptionModal] = useState<{ id: string, oldName: string, email: string } | null>(null);
+  const [editCredentialsModal, setEditCredentialsModal] = useState<{ id: string, oldEmail: string, newEmail: string, newPassword: string } | null>(null);
+  const [editCredentialsLoading, setEditCredentialsLoading] = useState(false);
+  const [editCredentialsError, setEditCredentialsError] = useState('');
+  
+  const [editUserData, setEditUserData] = useState<{ id: string, oldName: string, newName: string } | null>(null);
+  const [showEditConfirm, setShowEditConfirm] = useState(false);
+  const [editUserLoading, setEditUserLoading] = useState(false);
+
   // Add User Modal
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isAddUserRoleOpen, setIsAddUserRoleOpen] = useState(false);
@@ -60,15 +70,20 @@ export default function AccessDashboard() {
       Field: profiles.filter(p => p.role === 'Field').length,
       Admin: profiles.filter(p => {
         if (p.role !== 'Admin') return false;
-        const ident = (p.feature_flags?.email || p.username || '').toLowerCase();
-        // Exclude system-level admins by email or username
-        const systemAdmins = [
-          'foxsuperadmin@gmail.com',
-          'backendadmin1@gmail.com',
-          'fox_test_admin_04@fox.com',
-          'super administrator'
-        ];
-        return !systemAdmins.some(sys => ident.includes(sys));
+        const ident = (p.username || p.full_name || p.feature_flags?.email || '').toLowerCase();
+        
+        if (
+          ident.includes('super admin') || 
+          ident.includes('backend admin') || 
+          ident.includes('access control') || 
+          p.role === 'SuperAdmin' || 
+          ident.includes('foxdigital backend') ||
+          ident === 'backendadmin1@gmail.com' ||
+          ident === 'foxsuperadmin@gmail.com' ||
+          ident === 'fox_test_admin_04@fox.com'
+        ) return false;
+        
+        return true;
       }).length,
     };
   }, [profiles]);
@@ -80,14 +95,15 @@ export default function AccessDashboard() {
   async function fetchProfiles() {
     setLoading(true);
     const [profilesRes, configRes] = await Promise.all([
-      supabase.from('profiles').select('*'),
+      supabase.from('profiles').select('*').or('is_deleted.is.null,is_deleted.eq.false'),
       supabase.from('tenant_config').select('*').eq('id', 1).single()
     ]);
     if (configRes.data) {
       setTenantLimits({
         max_admin: configRes.data.max_admin || 5,
         max_user: configRes.data.max_user || 10,
-        max_field: configRes.data.max_field || 10
+        max_field: configRes.data.max_field || 10,
+        backend_admin_soft_delete: configRes.data.backend_admin_soft_delete !== false
       });
     }
     if (profilesRes.error) console.error("Error:", profilesRes.error);
@@ -98,9 +114,20 @@ export default function AccessDashboard() {
   const filteredProfiles = useMemo(() => {
     return profiles.filter(p => {
       const name = p.username || p.full_name || p.feature_flags?.email || '';
-      if (name === 'Super Administrator' || p.role === 'SuperAdmin' || name === 'Foxdigital Backend (DO NOT DELETE)') return false;
+      const nameLower = name.toLowerCase();
       
-      const matchSearch = name.toLowerCase().includes(searchQuery.toLowerCase());
+      if (
+        nameLower.includes('super admin') || 
+        nameLower.includes('backend admin') || 
+        nameLower.includes('access control') || 
+        p.role === 'SuperAdmin' || 
+        nameLower.includes('foxdigital backend') ||
+        nameLower === 'backendadmin1@gmail.com' ||
+        nameLower === 'foxsuperadmin@gmail.com' ||
+        nameLower === 'fox_test_admin_04@fox.com'
+      ) return false;
+      
+      const matchSearch = nameLower.includes(searchQuery.toLowerCase());
       let matchRole = false;
       if (filterRole === 'ALL') {
         matchRole = true;
@@ -178,6 +205,34 @@ export default function AccessDashboard() {
     );
   };
 
+  async function handleEditCredentials() {
+    if (!editCredentialsModal) return;
+    setEditCredentialsError('');
+    setEditCredentialsLoading(true);
+
+    try {
+      const response = await fetch('https://ganesh-backend-3j1t.onrender.com/api/update-employee-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employee_id: editCredentialsModal.id,
+          new_email: editCredentialsModal.newEmail,
+          new_password: editCredentialsModal.newPassword,
+          admin_password: 'Fox@2026'
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to update credentials');
+      
+      await fetchProfiles();
+      setEditCredentialsModal(null);
+    } catch (err: any) {
+      setEditCredentialsError(err.message);
+    } finally {
+      setEditCredentialsLoading(false);
+    }
+  }
+
   async function handleActionConfirm() {
     if (!actionData) return;
     setActionError('');
@@ -204,16 +259,27 @@ export default function AccessDashboard() {
       }
       
       try {
-        const response = await fetch('https://ganesh-backend-3j1t.onrender.com/api/delete-employee', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            employee_id: actionData.id,
-            admin_password: adminPassword
-          })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Failed to delete employee');
+        if (tenantLimits.backend_admin_soft_delete !== false) {
+          // SOFT DELETE
+          const { error } = await supabase
+            .from('profiles')
+            .update({ is_deleted: true })
+            .eq('id', actionData.id);
+            
+          if (error) throw error;
+        } else {
+          // HARD DELETE
+          const response = await fetch('https://ganesh-backend-3j1t.onrender.com/api/delete-employee', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              employee_id: actionData.id,
+              admin_password: adminPassword
+            })
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || 'Failed to delete employee');
+        }
         
         await fetchProfiles();
         setActionData(null);
@@ -226,6 +292,38 @@ export default function AccessDashboard() {
       }
     }
   }
+
+  const handleEditConfirmAction = async (shiftClients: boolean) => {
+    if (!editUserData) return;
+    setEditUserLoading(true);
+    try {
+      const { error: profileError } = await supabase.from('profiles').update({ username: editUserData.newName }).eq('id', editUserData.id);
+      if (profileError) throw profileError;
+
+      if (shiftClients) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { error: clientsError } = await supabase.from('clients')
+            .update({ 
+              user_id: user.id,
+              is_ex_employee_client: true, 
+              ex_employee_name: editUserData.oldName 
+            })
+            .eq('user_id', editUserData.id)
+            .eq('status', 'Converted');
+          if (clientsError) throw clientsError;
+        }
+      }
+
+      await fetchProfiles();
+      setEditUserData(null);
+      setShowEditConfirm(false);
+    } catch (err: any) {
+      alert(err.message || 'Error updating name.');
+    } finally {
+      setEditUserLoading(false);
+    }
+  };
 
   async function handleAddUser(e: React.FormEvent) {
     e.preventDefault();
@@ -251,7 +349,7 @@ export default function AccessDashboard() {
     setAddUserLoading(true);
     try {
       const dbRole = addUserData.role === 'Sales' ? 'User' : addUserData.role;
-      const response = await fetch('https://ganesh-backend-3jit.onrender.com/api/create-employee', {
+      const response = await fetch('https://ganesh-backend-3j1t.onrender.com/api/create-employee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -443,7 +541,15 @@ export default function AccessDashboard() {
                           <CheckCircle size={16} />
                         </button>
                       )}
-                      <button onClick={(e) => { e.stopPropagation(); setActionData({ id: p.id, name, type: 'DELETE' }); }} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', padding: 6, borderRadius: 8, cursor: 'pointer', color: '#ef4444' }} title="Delete User">
+                      <button onClick={(e) => { e.stopPropagation(); setEditOptionModal({ id: p.id, oldName: name, email: p.feature_flags?.email || '' }); }} style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', padding: 6, borderRadius: 8, cursor: 'pointer', color: 'var(--accent)' }} title="Edit Employee">
+                        <Edit2 size={16} />
+                      </button>
+                      <button onClick={async (e) => { 
+                        e.stopPropagation(); 
+                        const { data: config } = await supabase.from('tenant_config').select('backend_admin_soft_delete').eq('id', 1).single();
+                        setTenantLimits(prev => ({ ...prev, backend_admin_soft_delete: config?.backend_admin_soft_delete !== false }));
+                        setActionData({ id: p.id, name, type: 'DELETE' }); 
+                      }} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', padding: 6, borderRadius: 8, cursor: 'pointer', color: '#ef4444' }} title="Delete User">
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -615,7 +721,11 @@ export default function AccessDashboard() {
               </div>
               <p style={{ color: 'var(--muted)', marginBottom: '1.5rem', lineHeight: 1.6, position: 'relative', zIndex: 1, fontSize: '0.95rem' }}>
                 Are you sure you want to {actionData.type.toLowerCase()} <strong>{actionData.name}</strong>?
-                {actionData.type === 'DELETE' && " This action will permanently remove their account and erase their data."}
+                {actionData.type === 'DELETE' && (
+                  tenantLimits.backend_admin_soft_delete !== false
+                    ? " The user will be deleted but their data is still recoverable at backend admin."
+                    : <span> If you delete now the all data will wipe out no recovery. <br/><br/><strong style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>To make it recoverable, contact FOX DIGITAL.</strong></span>
+                )}
               </p>
 
               {actionData.type === 'DELETE' && (
@@ -833,6 +943,162 @@ export default function AccessDashboard() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Options Modal */}
+      <AnimatePresence>
+        {editOptionModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(3, 7, 18, 0.7)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={() => setEditOptionModal(null)}
+          >
+            <motion.div initial={{ scale: 0.95, y: 10, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, y: 10, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              style={{ background: 'var(--bg2)', border: '1px solid var(--border)', padding: '2rem', width: '90%', maxWidth: 400, borderRadius: 24, display: 'flex', flexDirection: 'column', gap: '1rem' }}
+            >
+              <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text)', fontSize: '1.25rem' }}>Edit Options</h3>
+              <p style={{ margin: '0 0 1rem 0', color: 'var(--muted)', fontSize: '0.9rem' }}>What would you like to edit for {editOptionModal.oldName}?</p>
+              
+              <button 
+                onClick={() => { setEditUserData({ id: editOptionModal.id, oldName: editOptionModal.oldName, newName: editOptionModal.oldName }); setEditOptionModal(null); }} 
+                className="btn-hover"
+                style={{ padding: '14px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', fontWeight: 600, fontSize: '1rem' }}
+              >
+                Change Name
+              </button>
+              
+              <button 
+                onClick={() => { setEditCredentialsModal({ id: editOptionModal.id, oldEmail: editOptionModal.email, newEmail: editOptionModal.email, newPassword: '' }); setEditOptionModal(null); }} 
+                className="btn-hover"
+                style={{ padding: '14px', borderRadius: 12, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '1rem' }}
+              >
+                Change Mail ID and Password
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Credentials Modal */}
+      <AnimatePresence>
+        {editCredentialsModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(3, 7, 18, 0.7)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={() => setEditCredentialsModal(null)}
+          >
+            <motion.div initial={{ scale: 0.95, y: 10, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, y: 10, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              style={{ background: 'var(--bg2)', border: '1px solid var(--border)', padding: '2rem', width: '90%', maxWidth: 400, borderRadius: 24 }}
+            >
+              <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text)', fontSize: '1.25rem' }}>Change Credentials</h3>
+              
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>New Email ID</label>
+                <input 
+                  type="email" 
+                  value={editCredentialsModal.newEmail} 
+                  onChange={(e) => setEditCredentialsModal({ ...editCredentialsModal, newEmail: e.target.value })}
+                  style={{ width: '100%', padding: '12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>New Password</label>
+                <input 
+                  type="text" 
+                  value={editCredentialsModal.newPassword} 
+                  onChange={(e) => setEditCredentialsModal({ ...editCredentialsModal, newPassword: e.target.value })}
+                  placeholder="Enter new password"
+                  style={{ width: '100%', padding: '12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }}
+                />
+              </div>
+
+              {editCredentialsError && (
+                <div style={{ marginBottom: '1rem', color: '#ef4444', fontSize: '0.85rem' }}>{editCredentialsError}</div>
+              )}
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button onClick={() => setEditCredentialsModal(null)} style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', cursor: 'pointer' }}>Cancel</button>
+                <button 
+                  onClick={handleEditCredentials}
+                  disabled={editCredentialsLoading}
+                  style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: 'var(--accent)', color: '#fff', cursor: editCredentialsLoading ? 'not-allowed' : 'pointer' }}
+                >
+                  {editCredentialsLoading ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Limit Exceeded Popup */}
+      <AnimatePresence>
+        {editUserData && !showEditConfirm && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(3, 7, 18, 0.7)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={() => setEditUserData(null)}
+          >
+            <motion.div initial={{ scale: 0.95, y: 10, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, y: 10, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              style={{ background: 'var(--bg2)', border: '1px solid var(--border)', padding: '2rem', width: '90%', maxWidth: 400, borderRadius: 24 }}
+            >
+              <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text)', fontSize: '1.25rem' }}>Edit Employee Name</h3>
+              <input 
+                type="text" 
+                value={editUserData.newName} 
+                onChange={(e) => setEditUserData({ ...editUserData, newName: e.target.value })}
+                style={{ width: '100%', padding: '12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }}
+              />
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                <button onClick={() => setEditUserData(null)} style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', cursor: 'pointer' }}>Cancel</button>
+                <button 
+                  onClick={() => {
+                    if (editUserData.newName !== editUserData.oldName) setShowEditConfirm(true);
+                    else setEditUserData(null);
+                  }} 
+                  style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}
+                >
+                  Save
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Confirm Popup */}
+      <AnimatePresence>
+        {showEditConfirm && editUserData && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(3, 7, 18, 0.7)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <motion.div initial={{ scale: 0.95, y: 10, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, y: 10, opacity: 0 }}
+              style={{ background: 'var(--bg2)', border: '1px solid var(--border)', padding: '2.5rem', width: '90%', maxWidth: 550, borderRadius: 24, textAlign: 'center' }}
+            >
+              <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text)', fontSize: '1.35rem' }}>Shift Converted Clients?</h3>
+              <p style={{ color: 'var(--muted)', fontSize: '1.05rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+                Has the current employee been relieved of their duties, and are you renaming this account to transfer their converted clients to a new employee?
+              </p>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button 
+                  onClick={() => handleEditConfirmAction(false)} 
+                  disabled={editUserLoading}
+                  style={{ flex: 1, padding: '14px', borderRadius: 12, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', fontWeight: 600, opacity: editUserLoading ? 0.7 : 1, cursor: 'pointer' }}
+                >
+                  No, just rename
+                </button>
+                <button 
+                  onClick={() => handleEditConfirmAction(true)} 
+                  disabled={editUserLoading}
+                  style={{ flex: 1, padding: '14px', borderRadius: 12, border: 'none', background: 'var(--accent)', color: '#fff', fontWeight: 600, opacity: editUserLoading ? 0.7 : 1, cursor: 'pointer' }}
+                >
+                  {editUserLoading ? 'Processing...' : 'Yes, shift clients'}
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

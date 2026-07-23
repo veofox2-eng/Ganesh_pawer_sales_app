@@ -35,12 +35,25 @@ export default function AuthScreen(props: any) {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
           throw new Error('Incorrect email or password. Please contact Admin if you do not have an account.');
         }
         throw error;
+      }
+      
+      if (authData?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_deleted')
+          .eq('id', authData.user.id)
+          .single();
+          
+        if (profile?.is_deleted) {
+          await supabase.auth.signOut();
+          throw new Error('This account has been deactivated or deleted by the administrator.');
+        }
       }
     } catch (e: any) {
       Alert.alert('Authentication Failed', e.message);

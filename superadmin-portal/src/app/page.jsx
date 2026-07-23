@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Shield, Settings, Server, Users, Activity, Smartphone, Check, X, ShieldAlert, Cpu } from 'lucide-react';
+import { fetchAllProfiles } from './actions';
+import { Shield, Settings, Server, Users, Activity, Smartphone, Check, X, ShieldAlert, Cpu, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function SuperAdminPortal() {
@@ -11,8 +12,20 @@ export default function SuperAdminPortal() {
   const [saving, setSaving] = useState(false);
   
   const [limits, setLimits] = useState({ max_admin: 0, max_user: 0, max_field: 0 });
-  const [appAccess, setAppAccess] = useState({ admin_app_active: false, employee_app_active: false });
+  const [appAccess, setAppAccess] = useState({ admin_app_active: true, employee_app_active: true, backend_admin_soft_delete: true });
   const [stats, setStats] = useState({ admin: 0, user: 0, field: 0 });
+  const [fetchError, setFetchError] = useState(null);
+  const [theme, setTheme] = useState('dark');
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('fox_superadmin_theme') || 'dark';
+    setTheme(savedTheme);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('fox_superadmin_theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     fetchData();
@@ -20,10 +33,13 @@ export default function SuperAdminPortal() {
 
   const fetchData = async () => {
     try {
-      const [configRes, profilesRes] = await Promise.all([
-        supabase.from('tenant_config').select('*').eq('id', 1).single(),
-        supabase.from('profiles').select('*') // Select all to avoid column-level caching bugs
-      ]);
+      const configRes = await supabase.from('tenant_config').select('*').eq('id', 1).single();
+      const profilesData = await fetchAllProfiles();
+
+      if (configRes.error) {
+        setFetchError('API error: ' + configRes.error.message);
+        return;
+      }
 
       if (configRes.data) {
         setConfig(configRes.data);
@@ -34,30 +50,45 @@ export default function SuperAdminPortal() {
         });
         setAppAccess({
           admin_app_active: !!configRes.data.admin_app_active,
-          employee_app_active: !!configRes.data.employee_app_active
+          employee_app_active: !!configRes.data.employee_app_active,
+          backend_admin_soft_delete: configRes.data.backend_admin_soft_delete !== false // Defaults to true if null
         });
       }
 
-      if (profilesRes.data) {
+      if (profilesData) {
         const counts = { admin: 0, user: 0, field: 0 };
-        const WEB_ADMIN_IDS = [
-          '6e464e84-c626-4041-8c70-b7d533b430a8', // Super Administrator
-          '08caf406-b2ef-435f-aa4b-b31189858cda'  // Foxdigital Backend
+        const systemAdmins = [
+          'foxsuperadmin@gmail.com',
+          'backendadmin@gmail.com',
+          'backendadmin1@gmail.com',
+          'fox_test_admin_04@fox.com',
+          'admin@fox.com',
+          'super administrator',
+          'backend admin',
+          'access control admin',
+          'super admin'
         ];
 
-        profilesRes.data.forEach(p => {
+        profilesData.forEach(p => {
           if (p.role === 'Admin') {
-            if (!WEB_ADMIN_IDS.includes(p.id)) {
+            const ident = (p.feature_flags?.email || p.username || '').toLowerCase();
+            const isSystem = systemAdmins.some(sys => ident.includes(sys));
+            if (!isSystem) {
               counts.admin++;
             }
           }
-          else if (p.role === 'Field') counts.field++;
-          else counts.user++; // Sales/User
+          else if (p.role === 'Field') {
+            counts.field++;
+          }
+          else if (p.role === 'Sales' || p.role === 'User') {
+            counts.user++;
+          }
         });
         setStats(counts);
       }
     } catch (err) {
       console.error(err);
+      setFetchError('Exception: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -97,14 +128,14 @@ export default function SuperAdminPortal() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#030712]">
+      <div className="flex h-screen items-center justify-center bg-[var(--color-fox-bg)] text-[var(--color-fox-text)]">
         <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen w-full bg-[#030712] text-slate-100 overflow-hidden font-sans">
+    <div className="flex h-screen w-full bg-[var(--color-fox-bg)] text-[var(--color-fox-text)] overflow-hidden font-sans transition-colors duration-300">
       {/* GLOBAL EFFECTS */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-600/10 blur-[120px]" />
@@ -122,13 +153,27 @@ export default function SuperAdminPortal() {
               <div className="absolute inset-0 rounded-2xl border border-white/20" />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight text-white mb-1">Super Administrator</h1>
+              <h1 className="text-4xl font-black tracking-tight mb-1 text-[var(--color-fox-text)]">Super Administrator</h1>
               <p className="text-slate-400 font-medium text-sm tracking-wide">Global Master Configuration & Tenant Control</p>
             </div>
           </div>
 
-
+          <motion.button 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="p-3 rounded-full bg-[var(--color-fox-bg-card)] border border-[var(--color-fox-border)] shadow-sm hover:shadow-md transition-shadow"
+          >
+            {theme === 'dark' ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} className="text-indigo-600" />}
+          </motion.button>
         </div>
+
+        {fetchError && (
+          <div className="mb-8 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 font-medium">
+            <ShieldAlert className="inline-block mr-2" size={20} />
+            {fetchError}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
@@ -141,7 +186,7 @@ export default function SuperAdminPortal() {
                 <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
                   <Server size={24} />
                 </div>
-                <h2 className="text-2xl font-bold text-white tracking-tight">Login Allocations</h2>
+                <h2 className="text-2xl font-bold text-[var(--color-fox-text)] tracking-tight">Login Allocations</h2>
               </div>
               <motion.button 
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
@@ -195,7 +240,7 @@ export default function SuperAdminPortal() {
               <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400">
                 <Cpu size={24} />
               </div>
-              <h2 className="text-2xl font-bold text-white tracking-tight">Master Kill Switches</h2>
+              <h2 className="text-2xl font-bold text-[var(--color-fox-text)] tracking-tight">Master Kill Switches</h2>
             </div>
 
             <p className="text-slate-400 text-sm mb-8 font-medium">Instantly enable or disable API access globally for mobile app clusters. If disabled, all active sessions for that app type will be rejected.</p>
@@ -212,6 +257,12 @@ export default function SuperAdminPortal() {
                 desc="Grants access to the main sales and field operative application."
                 active={appAccess.employee_app_active} 
                 onToggle={(val) => toggleAppAccess('employee_app_active', val)} 
+              />
+              <AppToggle 
+                title="Backend Admin's Deleted User" 
+                desc="If ON: Users are soft-deleted and sent to Deleted Users (Login disabled). If OFF: Users are permanently erased from the database."
+                active={appAccess.backend_admin_soft_delete} 
+                onToggle={(val) => toggleAppAccess('backend_admin_soft_delete', val)} 
               />
             </div>
 
@@ -246,7 +297,7 @@ function LimitRow({ role, color, bg, current, limit, onChange }) {
   };
   
   return (
-    <div className="p-5 rounded-2xl bg-slate-900/50 border border-slate-700/50">
+    <div className="p-5 rounded-2xl bg-[var(--color-fox-row-bg)] border border-[var(--color-fox-border)] shadow-sm">
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-3">
           <div className={`px-3 py-1.5 rounded-lg ${bg} ${color} font-black uppercase tracking-widest text-[10px] border border-current/20`}>
@@ -254,12 +305,12 @@ function LimitRow({ role, color, bg, current, limit, onChange }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-slate-400 mr-2">Limit:</span>
+          <span className="text-sm font-medium text-[var(--color-fox-text-muted)] mr-2">Limit:</span>
           
-          <div className="flex items-center bg-slate-950 border border-slate-700/80 rounded-xl overflow-hidden shadow-inner">
+          <div className="flex items-center bg-[var(--color-fox-input-bg)] border border-[var(--color-fox-border-light)] rounded-xl overflow-hidden shadow-inner">
             <button 
               onClick={handleDecrement}
-              className="px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-r border-slate-800"
+              className="px-3 py-2 text-[var(--color-fox-text-muted)] hover:text-[var(--color-fox-text)] transition-colors border-r border-[var(--color-fox-border-light)] hover:bg-[var(--color-fox-border)]"
             >
               -
             </button>
@@ -267,11 +318,11 @@ function LimitRow({ role, color, bg, current, limit, onChange }) {
               type="number" 
               value={limit}
               onChange={e => onChange(e.target.value)}
-              className="w-12 bg-transparent text-center text-white font-bold focus:outline-none focus:bg-slate-900 py-1.5 transition-colors text-sm"
+              className="w-12 bg-transparent text-center text-[var(--color-fox-text)] font-bold focus:outline-none focus:bg-black/5 py-1.5 transition-colors text-sm"
             />
             <button 
               onClick={handleIncrement}
-              className="px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-l border-slate-800"
+              className="px-3 py-2 text-[var(--color-fox-text-muted)] hover:text-[var(--color-fox-text)] transition-colors border-l border-[var(--color-fox-border-light)] hover:bg-[var(--color-fox-border)]"
             >
               +
             </button>
@@ -280,7 +331,7 @@ function LimitRow({ role, color, bg, current, limit, onChange }) {
       </div>
       
       <div className="flex items-center gap-4">
-        <div className="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden relative">
+        <div className="flex-1 h-2 rounded-full bg-[var(--color-fox-track-bg)] overflow-hidden relative shadow-inner">
           <motion.div 
             initial={{ width: 0 }}
             animate={{ width: `${percentage}%` }}
@@ -289,8 +340,8 @@ function LimitRow({ role, color, bg, current, limit, onChange }) {
           />
         </div>
         <div className="text-xs font-bold w-24 text-right">
-          <span className={current > limit ? "text-rose-400" : "text-white"}>{current}</span> 
-          <span className="text-slate-500"> / {limit} max</span>
+          <span className={current > limit ? "text-rose-400" : "text-[var(--color-fox-text)]"}>{current}</span> 
+          <span className="text-[var(--color-fox-text-muted)]"> / {limit} max</span>
         </div>
       </div>
     </div>
@@ -301,16 +352,16 @@ function AppToggle({ title, desc, active, onToggle }) {
   return (
     <motion.div 
       whileHover={{ scale: 1.01 }}
-      className={`p-5 rounded-2xl border transition-all ${active ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-slate-900/50 border-slate-700/50'}`}
+      className={`p-5 rounded-2xl border transition-all ${active ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-[var(--color-fox-row-bg)] border-[var(--color-fox-border)]'}`}
     >
       <div className="flex justify-between items-center">
         <div className="flex gap-4 items-center">
-          <div className={`p-3 rounded-xl ${active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
+          <div className={`p-3 rounded-xl ${active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-[var(--color-fox-track-bg)] text-[var(--color-fox-text-muted)]'}`}>
             <Smartphone size={20} />
           </div>
           <div>
-            <h4 className={`font-bold text-base mb-1 ${active ? 'text-emerald-400' : 'text-slate-300'}`}>{title}</h4>
-            <p className="text-xs text-slate-500 font-medium">{desc}</p>
+            <h4 className={`font-bold text-base mb-1 ${active ? 'text-emerald-500' : 'text-[var(--color-fox-text)]'}`}>{title}</h4>
+            <p className="text-xs text-[var(--color-fox-text-muted)] font-medium">{desc}</p>
           </div>
         </div>
         
@@ -321,13 +372,13 @@ function AppToggle({ title, desc, active, onToggle }) {
             checked={active}
             onChange={(e) => onToggle(e.target.checked)}
           />
-          <div className={`w-14 h-7 rounded-full transition-all duration-300 relative border ${active ? 'bg-emerald-500/20 border-emerald-500/50' : 'bg-slate-800 border-slate-700'}`}>
+          <div className={`w-14 h-7 rounded-full transition-all duration-300 relative border ${active ? 'bg-emerald-500/20 border-emerald-500/50' : 'bg-[var(--color-fox-track-bg)] border-[var(--color-fox-border-light)]'}`}>
             <motion.div 
               initial={false}
               animate={{ x: active ? 28 : 2 }}
-              className={`absolute top-[2px] w-5 h-5 rounded-full shadow-lg flex items-center justify-center ${active ? 'bg-emerald-400' : 'bg-slate-500'}`}
+              className={`absolute top-[2px] w-5 h-5 rounded-full shadow-lg flex items-center justify-center ${active ? 'bg-emerald-500' : 'bg-slate-400'}`}
             >
-              {active && <Check size={12} className="text-emerald-950 font-bold" />}
+              {active && <Check size={12} className="text-white font-bold" />}
             </motion.div>
           </div>
         </label>

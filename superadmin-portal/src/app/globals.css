@@ -7,8 +7,23 @@
   --color-fox-border: rgba(255, 255, 255, 0.08);
   --color-fox-border-light: rgba(255, 255, 255, 0.15);
   --color-fox-accent: #3b82f6;
-  
-  --font-sans: 'Outfit', 'Inter', sans-serif;
+  --color-fox-text: #f8fafc;
+  --color-fox-text-muted: #94a3b8;
+  --color-fox-row-bg: rgba(15, 23, 42, 0.5);
+  --color-fox-input-bg: #020617;
+  --color-fox-track-bg: #1e293b;
+}
+
+:root[data-theme="light"] {
+  --color-fox-bg: #f8fafc;
+  --color-fox-bg-card: rgba(255, 255, 255, 0.9);
+  --color-fox-border: rgba(0, 0, 0, 0.08);
+  --color-fox-border-light: rgba(0, 0, 0, 0.15);
+  --color-fox-text: #0f172a;
+  --color-fox-text-muted: #64748b;
+  --color-fox-row-bg: rgba(255, 255, 255, 0.8);
+  --color-fox-input-bg: #f1f5f9;
+  --color-fox-track-bg: #e2e8f0;
 }
 
 @layer base {
@@ -22,7 +37,7 @@
 
   body {
     background-color: var(--color-fox-bg);
-    color: #f8fafc;
+    color: var(--color-fox-text);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

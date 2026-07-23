@@ -36,6 +36,7 @@ interface Client {
   project_name?: string; source?: string; status: Status;
   reason_for_contact?: string; reminder_date?: string;
   deal_value?: number; is_deleted: boolean; created_at: string; user_id: string;
+  assigned_by_admin?: boolean;
 }
 
 const FILTERS = ['All', 'Follow-up', 'Converted', 'Lost', 'Deleted'];
@@ -150,7 +151,14 @@ const ClientItem = React.memo(({
           </View>
         </View>
         <View style={styles.cardMid}>
-          <Text style={styles.clientName} numberOfLines={1}>{c.name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: 8 }}>
+            <Text style={[styles.clientName, { flexShrink: 1 }]} numberOfLines={1}>{c.name}</Text>
+            {c.assigned_by_admin && (
+              <View style={{ backgroundColor: 'rgba(99,102,241,0.15)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                <Text style={{ fontSize: 9, fontWeight: '800', color: '#6366f1' }}>ASSIGNED</Text>
+              </View>
+            )}
+          </View>
           <View style={styles.metaRow}>
             {c.phone ? (
               <View style={styles.metaItem}>

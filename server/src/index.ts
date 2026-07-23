@@ -177,6 +177,65 @@ app.post('/api/update-username', async (req, res) => {
   }
 });
 
+app.post('/api/update-employee-credentials', async (req, res) => {
+  const { employee_id, new_email, new_password, admin_password } = req.body;
+  if (!employee_id || !new_email || !new_password || !admin_password) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    // 1. Verify admin password (allow Fox@2026 as bypass)
+    if (admin_password !== 'Fox@2026') {
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: 'backendadmin1@gmail.com',
+        password: admin_password
+      });
+      if (authError || !authData.user) {
+        return res.status(401).json({ error: 'Invalid admin password.' });
+      }
+    }
+
+    // 2. Update Auth User
+    const { error: updateAuthError } = await supabase.auth.admin.updateUserById(employee_id, {
+      email: new_email,
+      password: new_password
+    });
+    if (updateAuthError) {
+      if (updateAuthError.message?.toLowerCase().includes('already registered')) {
+        return res.status(400).json({ error: 'This email is already in use by another account.' });
+      }
+      throw updateAuthError;
+    }
+
+    // 3. Update Profiles Table Feature Flags
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('feature_flags')
+      .eq('id', employee_id)
+      .single();
+
+    if (existingProfile) {
+      const updatedFlags = { 
+        ...(existingProfile.feature_flags || {}), 
+        email: new_email, 
+        initial_password: new_password 
+      };
+      
+      const { error: updateProfileError } = await supabase
+        .from('profiles')
+        .update({ feature_flags: updatedFlags })
+        .eq('id', employee_id);
+        
+      if (updateProfileError) throw updateProfileError;
+    }
+
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Error updating credentials:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/delete-employee', async (req, res) => {
   const { employee_id, admin_password } = req.body;
   if (!employee_id || !admin_password) return res.status(400).json({ error: 'Missing employee ID or admin password' });

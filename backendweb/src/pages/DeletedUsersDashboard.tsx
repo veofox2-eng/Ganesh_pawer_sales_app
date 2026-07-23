@@ -22,13 +22,12 @@ const formatDateTimeDDMMYYYY = (dateObj: Date) => {
   return `${dateStr}, ${timeStr}`;
 };
 
-export default function SalesEmployeesDashboard() {
+export default function DeletedUsersDashboard() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
-  const [filterToday, setFilterToday] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showPerformancePopup, setShowPerformancePopup] = useState(false);
   const [otherDetailPopup, setOtherDetailPopup] = useState<'tasks' | 'leads' | 'calls' | null>(null);
@@ -78,8 +77,7 @@ export default function SalesEmployeesDashboard() {
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, username, role')
-        .in('role', ['sales', 'Sales', 'User', 'user'])
-        .or('is_deleted.is.null,is_deleted.eq.false');
+        .eq('is_deleted', true);
 
       if (!profiles || profiles.length === 0) {
         if (!silent) setLoading(false);
@@ -218,7 +216,7 @@ export default function SalesEmployeesDashboard() {
 
   const filteredClients = useMemo(() => {
     if (!selectedEmp) return [];
-    let result = selectedEmp.clients.filter((client: any) => {
+    return selectedEmp.clients.filter((client: any) => {
       if (filterStatus === 'ALL') return true;
       if (filterStatus === 'Deleted') return client.is_deleted;
       if (client.is_deleted) return false;
@@ -234,19 +232,7 @@ export default function SalesEmployeesDashboard() {
       if (filterStatus === 'Follow-up') return ['Follow-up', 'Cold'].includes(clientStatus);
       return false;
     });
-
-    if (filterToday) {
-      const todayString = formatDateDDMMYYYY(new Date());
-      result = result.filter((client: any) => {
-        if (client.created_at && formatDateDDMMYYYY(new Date(client.created_at)) === todayString) return true;
-        if (client.updated_at && formatDateDDMMYYYY(new Date(client.updated_at)) === todayString) return true;
-        if (client.cInteractions?.some((i: any) => formatDateDDMMYYYY(new Date(i.created_at)) === todayString)) return true;
-        return false;
-      });
-    }
-
-    return result;
-  }, [selectedEmp, filterStatus, filterToday]);
+  }, [selectedEmp, filterStatus]);
 
   const filteredEmployees = useMemo(() => {
     if (!searchQuery) return employees;
@@ -482,12 +468,16 @@ export default function SalesEmployeesDashboard() {
     setDeleteLoading(true);
     setDeleteError('');
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_deleted: true })
-        .eq('id', deleteEmployeeData.id);
-        
-      if (error) throw error;
+      const response = await fetch('https://ganesh-backend-3jit.onrender.com/api/delete-employee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employee_id: deleteEmployeeData.id,
+          admin_password: deleteAdminPassword
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to delete employee');
       
       setToastMessage({ title: 'Success', message: 'Employee and all their records deleted successfully!', type: 'success' });
       setDeleteEmployeeData(null);
@@ -553,7 +543,7 @@ export default function SalesEmployeesDashboard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h2 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
               <Users size={18} color="var(--accent)" />
-              Sales Roster
+              Deleted Employees
             </h2>
           </div>
           <div style={{ position: 'relative' }}>
@@ -885,22 +875,13 @@ export default function SalesEmployeesDashboard() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                       <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text)', fontWeight: 700 }}>Client Portfolio</h3>
                       {!isSelectionMode ? (
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button
-                            onClick={() => setFilterToday(!filterToday)}
-                            className="btn-hover"
-                            style={{ background: filterToday ? 'rgba(16,185,129,0.1)' : 'rgba(100,116,139,0.1)', color: filterToday ? '#10b981' : 'var(--muted)', border: `1px solid ${filterToday ? 'rgba(16,185,129,0.2)' : 'rgba(100,116,139,0.2)'}`, padding: '6px 14px', borderRadius: 10, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
-                          >
-                            Today
-                          </button>
-                          <button
-                            onClick={() => setIsSelectionMode(true)}
-                            className="btn-hover"
-                            style={{ background: 'rgba(99,102,241,0.1)', color: 'var(--accent)', border: '1px solid rgba(99,102,241,0.2)', padding: '6px 14px', borderRadius: 10, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
-                          >
-                            Select
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => setIsSelectionMode(true)}
+                          className="btn-hover"
+                          style={{ background: 'rgba(99,102,241,0.1)', color: 'var(--accent)', border: '1px solid rgba(99,102,241,0.2)', padding: '6px 14px', borderRadius: 10, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+                        >
+                          Select
+                        </button>
                       ) : (
                         <button
                           onClick={() => { setIsSelectionMode(false); setSelectedClients([]); }}

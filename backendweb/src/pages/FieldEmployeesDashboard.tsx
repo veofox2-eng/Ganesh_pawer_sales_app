@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
-import { Users, PhoneCall, MessageCircle, User, ArrowLeft, CheckCircle, Trash2, XCircle, Search, Play, Pause, FileText, Paperclip, Download, X, ChevronDown, MapPin, Mic, Map, UserPlus, Lock, Eye, EyeOff } from 'lucide-react';
+import { Users, PhoneCall, MessageCircle, User, ArrowLeft, CheckCircle, Check, Trash2, XCircle, Search, Play, Pause, FileText, Paperclip, Download, X, ChevronDown, MapPin, Mic, Map, UserPlus, Lock, Eye, EyeOff, Share2 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import autoTable from 'jspdf-autotable';
@@ -53,6 +53,12 @@ export default function FieldEmployeesDashboard() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [hoveredChartSlice, setHoveredChartSlice] = useState<string | null>(null);
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareTargetEmployee, setShareTargetEmployee] = useState<string | null>(null);
+  const [allEmployeesList, setAllEmployeesList] = useState<any[]>([]);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const dashboardScrollPos = useRef<number>(0);
@@ -81,7 +87,8 @@ export default function FieldEmployeesDashboard() {
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, username, role')
-          .in('role', ['field', 'Field']);
+          .in('role', ['field', 'Field'])
+          .or('is_deleted.is.null,is_deleted.eq.false');
 
         if (!profiles || profiles.length === 0) {
           setLoading(false);
@@ -521,16 +528,12 @@ export default function FieldEmployeesDashboard() {
     setDeleteLoading(true);
     setDeleteError('');
     try {
-      const response = await fetch('https://ganesh-backend-3jit.onrender.com/api/delete-employee', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employee_id: deleteEmployeeData.id,
-          admin_password: deleteAdminPassword
-        })
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to delete employee');
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_deleted: true })
+        .eq('id', deleteEmployeeData.id);
+        
+      if (error) throw error;
 
       alert('Employee and all their records deleted successfully!');
       setDeleteEmployeeData(null);
@@ -541,6 +544,47 @@ export default function FieldEmployeesDashboard() {
       setDeleteError(err.message || 'Something went wrong');
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const fetchAllEmployees = async () => {
+    try {
+      const { data } = await supabase.from('profiles').select('id, username, role, feature_flags').in('role', ['Sales', 'Field', 'sales', 'field', 'User', 'user']);
+      setAllEmployeesList(data || []);
+    } catch (e) {
+      console.error('Error fetching employees:', e);
+    }
+  };
+
+  const handleOpenShareModal = () => {
+    fetchAllEmployees();
+    setShareTargetEmployee(null);
+    setShowShareModal(true);
+  };
+
+  const handleConfirmShare = async () => {
+    if (!shareTargetEmployee || selectedClients.length === 0) return;
+    setShareLoading(true);
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({ 
+          user_id: shareTargetEmployee,
+          assigned_by_admin: true 
+        })
+        .in('id', selectedClients);
+        
+      if (error) throw error;
+      
+      alert('Clients shared successfully!');
+      setSelectedClients([]);
+      setIsSelectionMode(false);
+      setShowShareModal(false);
+      window.location.reload();
+    } catch (e: any) {
+      alert('Error sharing clients: ' + e.message);
+    } finally {
+      setShareLoading(false);
     }
   };
 
@@ -1000,11 +1044,62 @@ export default function FieldEmployeesDashboard() {
                   </div>
                 ) : (
                   <div style={{ background: 'linear-gradient(145deg, var(--surface), rgba(255,255,255,0.01))', borderRadius: 24, border: '1px solid var(--border)', padding: '2rem', boxShadow: '0 8px 30px rgba(0,0,0,0.03)' }}>
-                    <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.25rem', color: 'var(--text)', fontWeight: 700 }}>Client Portfolio</h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text)', fontWeight: 700 }}>Client Portfolio</h3>
+                        {!isSelectionMode ? (
+                          <button
+                            onClick={() => setIsSelectionMode(true)}
+                            className="btn-hover"
+                            style={{ background: 'rgba(99,102,241,0.1)', color: 'var(--accent)', border: '1px solid rgba(99,102,241,0.2)', padding: '6px 14px', borderRadius: 10, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+                          >
+                            Select
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => { setIsSelectionMode(false); setSelectedClients([]); }}
+                            className="btn-hover"
+                            style={{ background: 'rgba(100,116,139,0.1)', color: 'var(--muted)', border: '1px solid rgba(100,116,139,0.2)', padding: '6px 14px', borderRadius: 10, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+                      {selectedClients.length > 0 && isSelectionMode && (
+                        <motion.button
+                          initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                          onClick={handleOpenShareModal}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 12, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          <Share2 size={16} /> Share {selectedClients.length} Client{selectedClients.length > 1 ? 's' : ''}
+                        </motion.button>
+                      )}
+                    </div>
                     <div style={{ borderRadius: 16, overflow: 'hidden', border: '1px solid var(--border)' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                         <thead style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
                           <tr>
+                            {isSelectionMode && (
+                              <th style={{ padding: '0.75rem 0.5rem', width: 40, textAlign: 'center' }}>
+                                <div 
+                                  onClick={() => {
+                                    if (filteredClients.length > 0 && selectedClients.length === filteredClients.length) {
+                                      setSelectedClients([]);
+                                    } else {
+                                      setSelectedClients(filteredClients.map((c: any) => c.id));
+                                    }
+                                  }}
+                                  style={{ 
+                                    width: 20, height: 20, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', transition: 'all 0.2s',
+                                    background: filteredClients.length > 0 && selectedClients.length === filteredClients.length ? 'var(--accent)' : 'var(--surface)',
+                                    border: `2px solid ${filteredClients.length > 0 && selectedClients.length === filteredClients.length ? 'var(--accent)' : 'rgba(100, 116, 139, 0.3)'}`,
+                                    boxShadow: '0 2px 5px rgba(0,0,0,0.08)'
+                                  }}
+                                >
+                                  {filteredClients.length > 0 && selectedClients.length === filteredClients.length && <Check size={14} color="#fff" strokeWidth={3} />}
+                                </div>
+                              </th>
+                            )}
                             <th style={{ padding: '0.75rem 0.5rem', fontWeight: 600, color: 'var(--muted)', whiteSpace: 'nowrap' }}>Client Name</th>
                             <th style={{ padding: '0.75rem 0.5rem', fontWeight: 600, color: 'var(--muted)', whiteSpace: 'nowrap', textAlign: 'center' }}>Status</th>
                             <th style={{ padding: '0.75rem 0.5rem', fontWeight: 600, color: 'var(--muted)', whiteSpace: 'nowrap', textAlign: 'center' }}>Calls</th>
@@ -1020,19 +1115,45 @@ export default function FieldEmployeesDashboard() {
                           {filteredClients.length === 0 ? (
                             <tr><td colSpan={9} style={{ padding: '2rem', textAlign: 'center', color: 'var(--muted)' }}>No clients found for this filter.</td></tr>
                           ) : filteredClients.map((client: any, i: number) => (
-                            <tr key={client.id} style={{ borderBottom: i === selectedEmp.clients.length - 1 ? 'none' : '1px solid var(--border)', background: 'var(--surface)' }}>
+                            <tr key={client.id} style={{ borderBottom: i === selectedEmp.clients.length - 1 ? 'none' : '1px solid var(--border)', background: selectedClients.includes(client.id) ? 'rgba(59,130,246,0.05)' : 'var(--surface)' }}>
+                              {isSelectionMode && (
+                                <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                                  <div 
+                                    onClick={() => {
+                                      if (selectedClients.includes(client.id)) {
+                                        setSelectedClients(prev => prev.filter(id => id !== client.id));
+                                      } else {
+                                        setSelectedClients(prev => [...prev, client.id]);
+                                      }
+                                    }}
+                                    style={{ 
+                                      width: 20, height: 20, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', transition: 'all 0.2s',
+                                      background: selectedClients.includes(client.id) ? 'var(--accent)' : 'var(--surface)',
+                                      border: `2px solid ${selectedClients.includes(client.id) ? 'var(--accent)' : 'rgba(100, 116, 139, 0.3)'}`,
+                                      boxShadow: '0 2px 5px rgba(0,0,0,0.08)'
+                                    }}
+                                  >
+                                    {selectedClients.includes(client.id) && <Check size={14} color="#fff" strokeWidth={3} />}
+                                  </div>
+                                </td>
+                              )}
                               <td style={{ padding: '0.75rem 0.5rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                                <span
-                                  onClick={() => {
-                                    if (scrollRef.current) dashboardScrollPos.current = scrollRef.current.scrollTop;
-                                    setSelectedClientId(client.id);
-                                  }}
-                                  style={{ color: 'var(--accent)', cursor: 'pointer', textDecoration: 'none' }}
-                                  onMouseOver={(e) => e.currentTarget.style.textDecoration = 'underline'}
-                                  onMouseOut={(e) => e.currentTarget.style.textDecoration = 'none'}
-                                >
-                                  {client.name || 'Unnamed Client'}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <span
+                                    onClick={() => {
+                                      if (scrollRef.current) dashboardScrollPos.current = scrollRef.current.scrollTop;
+                                      setSelectedClientId(client.id);
+                                    }}
+                                    style={{ color: 'var(--accent)', cursor: 'pointer', textDecoration: 'none' }}
+                                    onMouseOver={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                                    onMouseOut={(e) => e.currentTarget.style.textDecoration = 'none'}
+                                  >
+                                    {client.name || 'Unnamed Client'}
+                                  </span>
+                                  {client.assigned_by_admin && (
+                                    <span style={{ fontSize: '0.65rem', padding: '2px 6px', background: 'rgba(99,102,241,0.15)', color: '#818cf8', borderRadius: 4, fontWeight: 700, textTransform: 'uppercase' }}>Assigned</span>
+                                  )}
+                                </div>
                               </td>
                               <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
                                 <span style={{
@@ -1145,6 +1266,89 @@ export default function FieldEmployeesDashboard() {
                 })()}%
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share Clients Popup */}
+      {showShareModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 24, padding: '2.5rem', width: '90%', maxWidth: 500, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', position: 'relative' }}>
+            <button 
+              onClick={() => setShowShareModal(false)}
+              style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 0 }}
+            >
+              <XCircle size={24} />
+            </button>
+            <h2 style={{ margin: '0 0 1.5rem 0', fontSize: '1.5rem', fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Share2 size={24} color="var(--accent)" />
+              Share {selectedClients.length} Client{selectedClients.length > 1 ? 's' : ''}
+            </h2>
+            
+            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '1rem' }} className="custom-scrollbar">
+              
+              {/* Sales Team */}
+              <div>
+                <h4 style={{ margin: '0 0 0.75rem 0', color: 'var(--muted)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>Sales Team</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {allEmployeesList.filter(e => ['sales', 'user'].includes(e.role?.toLowerCase()) && e.id !== selectedEmpId).length === 0 && (
+                    <div style={{ fontSize: '0.85rem', color: 'var(--muted)', fontStyle: 'italic' }}>No other sales employees found.</div>
+                  )}
+                  {allEmployeesList.filter(e => ['sales', 'user'].includes(e.role?.toLowerCase()) && e.id !== selectedEmpId).map(emp => (
+                    <div 
+                      key={emp.id} 
+                      onClick={() => setShareTargetEmployee(emp.id)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '1rem', background: shareTargetEmployee === emp.id ? 'rgba(59,130,246,0.1)' : 'var(--surface)', border: `1px solid ${shareTargetEmployee === emp.id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 12, cursor: 'pointer', transition: 'all 0.2s' }}
+                    >
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
+                        <User size={18} color="var(--muted)" />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.95rem' }}>{emp.username || emp.feature_flags?.email || 'Unnamed'}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>Sales Operative</div>
+                      </div>
+                      {shareTargetEmployee === emp.id && <CheckCircle size={20} color="var(--accent)" />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Field Team */}
+              <div>
+                <h4 style={{ margin: '0 0 0.75rem 0', color: 'var(--muted)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>Field Team</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {allEmployeesList.filter(e => e.role?.toLowerCase() === 'field' && e.id !== selectedEmpId).length === 0 && (
+                    <div style={{ fontSize: '0.85rem', color: 'var(--muted)', fontStyle: 'italic' }}>No field employees found.</div>
+                  )}
+                  {allEmployeesList.filter(e => e.role?.toLowerCase() === 'field' && e.id !== selectedEmpId).map(emp => (
+                    <div 
+                      key={emp.id} 
+                      onClick={() => setShareTargetEmployee(emp.id)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '1rem', background: shareTargetEmployee === emp.id ? 'rgba(59,130,246,0.1)' : 'var(--surface)', border: `1px solid ${shareTargetEmployee === emp.id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 12, cursor: 'pointer', transition: 'all 0.2s' }}
+                    >
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
+                        <User size={18} color="var(--muted)" />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.95rem' }}>{emp.username || emp.feature_flags?.email || 'Unnamed'}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>Field Operative</div>
+                      </div>
+                      {shareTargetEmployee === emp.id && <CheckCircle size={20} color="var(--accent)" />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+            <button 
+              onClick={handleConfirmShare}
+              disabled={!shareTargetEmployee || shareLoading}
+              className="btn-hover"
+              style={{ marginTop: '1.5rem', padding: '0.85rem', background: shareTargetEmployee ? 'var(--accent)' : 'var(--surface)', color: shareTargetEmployee ? '#fff' : 'var(--muted)', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '0.95rem', cursor: shareTargetEmployee ? 'pointer' : 'not-allowed', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              {shareLoading ? 'Sharing...' : 'Confirm & Share'}
+            </button>
           </div>
         </div>
       )}

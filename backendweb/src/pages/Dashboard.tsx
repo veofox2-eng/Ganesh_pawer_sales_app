@@ -8,6 +8,8 @@ import { supabase } from '../lib/supabase';
 import SalesEmployeesDashboard from './SalesEmployeesDashboard';
 import FieldEmployeesDashboard from './FieldEmployeesDashboard';
 import AdminEmployeesDashboard from './AdminEmployeesDashboard';
+import ExEmployeesDashboard from './ExEmployeesDashboard';
+import DeletedUsersDashboard from './DeletedUsersDashboard';
 
 const pageV = {
   initial: { opacity: 0, y: 18, scale: 0.99 },
@@ -656,6 +658,7 @@ function Overview() {
             icon={Shield} 
             color="#f59e0b" 
             delay={0.3} 
+            onClick={() => navigate('/dashboard/admin-employees')} 
           />
         </div>
         
@@ -702,7 +705,8 @@ export default function Dashboard() {
           <Route path="/sales-employees" element={<SalesEmployeesDashboard />} />
           <Route path="/field-employees" element={<FieldEmployeesDashboard />} />
           <Route path="/admin-employees" element={<AdminEmployeesDashboard />} />
-
+          <Route path="/ex-employees" element={<ExEmployeesDashboard />} />
+          <Route path="/deleted-users" element={<DeletedUsersDashboard />} />
           <Route path="/settings" element={<div style={{ padding: '2rem', color: 'var(--text)', background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--border)' }}><h3>System Settings</h3><p style={{ color: 'var(--muted)', marginTop: 8 }}>Coming soon...</p></div>} />
         </Routes>
       </AnimatePresence>
